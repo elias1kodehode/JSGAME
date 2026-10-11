@@ -7,34 +7,215 @@ const ball = {
   vx: 200,
   vy: 0,
 };
+const player = {
+  height: 50,
+  width: 30,
+  x: 0,
+  y: canvas.height - 50,
+  vx: 0, // px/s
+  acceleration: 500, // px/s^2
+  deceleration: 700, // px/s^2
+  reversalMultiplier: 2, //
+  maxSpeed: 300, // px/s
+  restitution: 0.5,
+};
+let movingRight = false;
+let movingLeft = false;
+
 const gravity = 1000;
 const bounceSpeed = 400;
 let lastTime = 0;
 let running = true;
 
+// GAMELOOP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function gameLoop(timestamp) {
   if (!lastTime) {
     lastTime = timestamp;
   }
-  const dt = (timestamp - lastTime) * 0.001;
+  let dt = (timestamp - lastTime) * 0.001;
+  if (dt >= 0.1) {
+    dt = 0;
+  }
   lastTime = timestamp;
-  console.log(timestamp);
+  // console.log("dt: " + dt);
+  // console.log(timestamp);
   if (running) {
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     updateBall(ball, dt);
     drawBall(ball);
+    // console.log("player", player);
+    updatePlayer(player, dt);
+    drawPlayer(player);
+    checkPlayerBallCollision(player, ball);
+    updatePlayerInfo(player);
+    recordPlayerVelocity(player, dt);
+    drawVelocityGraph();
     requestAnimationFrame(gameLoop);
-    // if (ball.y > canvas.height || ball.x > canvas.width) {
-    //   running = false;
-    // }
   }
 }
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawBall(ball) {
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
   ctx.stroke();
 }
+// BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// PLAYER COLLISION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function checkPlayerBallCollision(player, ball) {
+  // if (
+  //   ball.x + ball.radius >= player.x &&
+  //   ball.x - ball.radius <= player.x + player.width &&
+  //   ball.y + ball.radius >= player.y &&
+  //   ball.y - ball.radius <= player.y + player.height
+  // ) {
+  //   console.log("X HIT");
+  // }
+
+  const closestX = Math.min(
+    Math.max(ball.x, player.x),
+    player.x + player.width,
+  );
+  const closestY = Math.min(
+    Math.max(ball.y, player.y),
+    player.y + player.height,
+  );
+
+  return (
+    Math.sqrt((closestX - ball.x) ** 2 + (closestY - ball.y) ** 2) <=
+    ball.radius
+  );
+}
+// PLAYER COLLISION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function drawPlayer(player) {
+  const isHit = checkPlayerBallCollision(player, ball);
+
+  if (isHit) {
+    ctx.fillStyle = "red";
+  } else {
+    ctx.fillStyle = "blue";
+  }
+
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+function updatePlayer(player, dt) {
+  // NEW MOVEMENT
+
+  if (movingLeft === movingRight) {
+    // break
+    if (player.vx > 0) {
+      player.vx = Math.max(0, player.vx - player.deceleration * dt);
+    } else if (player.vx < 0) {
+      player.vx = Math.min(0, player.vx + player.deceleration * dt);
+    } else {
+      player.vx = 0;
+    }
+  } else {
+    if (movingRight) {
+      //reversal check
+
+      if (player.vx < 0) {
+        player.vx += player.acceleration * player.reversalMultiplier * dt;
+      } else {
+        player.vx += player.acceleration * dt;
+      }
+      if (player.vx > player.maxSpeed) {
+        player.vx = player.maxSpeed;
+      }
+    } else {
+      //Moving Left
+
+      if (player.vx > 0) {
+        player.vx -= player.acceleration * player.reversalMultiplier * dt;
+      } else {
+        player.vx -= player.acceleration * dt;
+      }
+      if (player.vx < -player.maxSpeed) {
+        player.vx = -player.maxSpeed;
+      }
+    }
+  }
+
+  // PLAYER MOVEMENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  player.x += player.vx * dt;
+
+  // COLLISION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (player.x + player.width >= canvas.width && player.vx > 0) {
+    player.x = canvas.width - player.width;
+    player.vx = -player.vx * player.restitution;
+  }
+  if (player.x <= 0 && player.vx < 0) {
+    player.x = 0;
+    player.vx = -player.vx * player.restitution;
+  }
+
+  // SpeedlimitCHECK
+  // if (-player.maxSpeed > player.vx && player.vx < player.maxSpeed) {
+  // }
+
+  // if (player.vx < 0 && movingRight) {
+  //   player.vx += player.acceleration * player.reversalMultiplier * dt;
+  // } else if (movingRight) {
+  //   player.vx += player.acceleration * dt;
+  // }
+
+  // if (movingLeft) {
+  //   player.vx -= player.acceleration * dt;
+  // }
+  // if (player.vx > player.maxSpeed) {
+  //   player.vx = player.maxSpeed;
+  // }
+  // if (player.vx < -player.maxSpeed) {
+  //   player.vx = -player.maxSpeed;
+  // }
+
+  // player.x += player.vx * dt;
+
+  // if (player.vx > 0 && movingLeft) {
+  //   // Reversing from right to left
+  // }
+  // if (movingLeft === movingRight) {
+  // if (player.vx > 0) {
+  //   player.vx = Math.max(0, player.vx - player.deceleration * dt);
+  // } else if (player.vx < 0) {
+  //   player.vx = Math.min(0, player.vx + player.deceleration * dt);
+  // } else {
+  //   player.vx = 0;
+  // }
+  // }
+  // console.log({
+  //   x: player.x,
+  //   vx: player.vx,
+  //   restitution: player.restitution,
+  // });
+}
+// PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+document.addEventListener("keydown", (event) => {
+  event.preventDefault();
+  if (event.key === "ArrowRight") {
+    movingRight = true;
+  }
+  if (event.key === "ArrowLeft") {
+    movingLeft = true;
+  }
+});
+document.addEventListener("keyup", (event) => {
+  event.preventDefault();
+  if (event.key === "ArrowRight") {
+    movingRight = false;
+  }
+  if (event.key === "ArrowLeft") {
+    movingLeft = false;
+  }
+});
+// KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 let highestPoint = canvas.height;
 function updateBall(ball, dt) {
@@ -52,8 +233,8 @@ function updateBall(ball, dt) {
     highestPoint = ball.y;
   }
   if (ball.y + ball.radius >= canvas.height) {
-    console.log("Impact velocity before:", ball.vy);
-    console.log("Floor penetration:", ball.y + ball.radius - canvas.height);
+    // console.log("Impact velocity before:", ball.vy);
+    // console.log("Floor penetration:", ball.y + ball.radius - canvas.height);
     const D =
       vy0 ** 2 - 4 * (0.5 * gravity) * (y0 - canvas.height + ball.radius);
     const t1 = (-vy0 + Math.sqrt(D)) / gravity;
@@ -75,14 +256,14 @@ function updateBall(ball, dt) {
         reboundVelocity * remainingTime +
         0.5 * gravity * remainingTime ** 2;
       ball.vy = reboundVelocity + gravity * remainingTime;
-      console.log("HIT: Impact velocity:", impactVelocity);
-      console.log("HIT: Rebound velocity" + reboundVelocity);
-      console.log("HIT: Highest point during bounce: " + highestPoint);
+      // console.log("HIT: Impact velocity:", impactVelocity);
+      // console.log("HIT: Rebound velocity" + reboundVelocity);
+      // console.log("HIT: Highest point during bounce: " + highestPoint);
       highestPoint = canvas.height;
       const t = -reboundVelocity / gravity;
       const highestPointTheoretical =
         impactY + reboundVelocity * t + 0.5 * (gravity * t ** 2);
-      console.log("HIT: Theoretical height: " + highestPointTheoretical);
+      // console.log("HIT: Theoretical height: " + highestPointTheoretical);
     }
   }
   // if (ball.x + ball.radius >= canvas.width || ball.x - ball.radius <= 0) {
@@ -114,4 +295,77 @@ function handleHorizontalCollision(ball, x0, dt) {
   }
 }
 
+// DIAGNOSTICS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+const playerXInfo = document.getElementById("player-x");
+const playerVxInfo = document.getElementById("player-vx");
+const playerAcceleration = document.getElementById("player-acceleration");
+
+function updatePlayerInfo(player) {
+  playerXInfo.innerText = player.x.toFixed(2);
+  playerVxInfo.innerText = player.vx.toFixed(2);
+  playerAcceleration.innerText = player.acceleration;
+}
+
+const accelerationSlider = document.getElementById("acceleration-slider");
+const accelerationDisplay = document.getElementById("acceleration-value");
+const decelerationSlider = document.getElementById("deceleration-slider");
+const decelerationDisplay = document.getElementById("deceleration-value");
+
+accelerationSlider.addEventListener("change", () => {
+  player.acceleration = accelerationSlider.value;
+  accelerationDisplay.innerText = player.acceleration;
+});
+
+decelerationSlider.addEventListener("change", () => {
+  player.deceleration = decelerationSlider.value;
+  decelerationDisplay.innerText = player.deceleration;
+});
+
+// !!!!!!!!!! GRAPH !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+let sampleTimer = 0;
+const sampleInterval = 0.0333;
+const velocityHistory = [];
+const historyDuration = 10;
+const maxSamples = Math.round(historyDuration / sampleInterval);
+function recordPlayerVelocity(player, dt) {
+  sampleTimer += dt;
+
+  if (sampleTimer >= sampleInterval) {
+    velocityHistory.push(player.vx);
+    sampleTimer -= sampleInterval;
+    if (velocityHistory.length > maxSamples) {
+      velocityHistory.shift();
+    }
+  }
+}
+
+const graphCanvas = document.getElementById("velocity-graph");
+const graphCtx = graphCanvas.getContext("2d");
+function drawVelocityGraph() {
+  graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+  const graphingRatio = -(graphCanvas.height / (player.maxSpeed * 2));
+
+  graphCtx.beginPath();
+  graphCtx.moveTo(0, graphCanvas.height / 2);
+  graphCtx.lineTo(graphCanvas.width, graphCanvas.height / 2);
+  graphCtx.stroke();
+  let graphX = graphCanvas.width;
+  const graphGap = graphCanvas.width / maxSamples;
+  graphCtx.beginPath();
+  for (let index = velocityHistory.length - 1; index >= 0; index--) {
+    const graphY =
+      graphingRatio * velocityHistory[index] + graphCanvas.height / 2;
+    if (index === velocityHistory.length - 1) {
+      graphCtx.moveTo(graphX, graphY);
+    } else {
+      graphCtx.lineTo(graphX, graphY);
+    }
+
+    //DRAW
+    graphX -= graphGap;
+  }
+  graphCtx.stroke();
+}
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 requestAnimationFrame(gameLoop);

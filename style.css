@@ -1,0 +1,10 @@
+#value-container {
+  display: grid;
+  grid-template-columns: 10% 1fr;
+}
+
+#player-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
