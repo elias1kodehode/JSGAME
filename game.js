@@ -18,7 +18,11 @@ const player = {
   reversalMultiplier: 2, //
   maxSpeed: 300, // px/s
   restitution: 0.5,
+  facing: "right",
+  maxHarpoons: 1,
 };
+let harpoon = null;
+let harpoons = [];
 let movingRight = false;
 let movingLeft = false;
 
@@ -43,11 +47,19 @@ function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     updateBall(ball, dt);
     drawBall(ball);
+    if (harpoon !== null) {
+      if (!updateHarpoon(harpoon, dt)) {
+        drawHarpoon(harpoon);
+      } else {
+        harpoon = null;
+      }
+    }
     // console.log("player", player);
     updatePlayer(player, dt);
     drawPlayer(player);
     checkPlayerBallCollision(player, ball);
     updatePlayerInfo(player);
+
     recordPlayerVelocity(player, dt);
     drawVelocityGraph();
     requestAnimationFrame(gameLoop);
@@ -195,24 +207,91 @@ function updatePlayer(player, dt) {
   // });
 }
 // PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// HARPOON !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+function shootHarpoon(player) {
+  let shootY = player.y;
+  let shootX;
+  let tip = shootY;
+  let speed = 0;
+  let acceleration = 1000;
+  let duration = 2;
+  let timer = 0;
+  if (player.facing === "right") {
+    shootX = player.x + player.width;
+  }
+  if (player.facing === "left") {
+    shootX = player.x;
+  }
+
+  return {
+    shootX,
+    shootY,
+    tip,
+    speed,
+    acceleration,
+    duration,
+    timer,
+  };
+}
+function drawHarpoon(harpoon) {
+  ctx.beginPath();
+  ctx.moveTo(harpoon.shootX, canvas.height);
+  ctx.lineTo(harpoon.shootX, harpoon.tip);
+  ctx.stroke();
+}
+function updateHarpoon(harpoon, dt) {
+  if (harpoon.tip > 0) {
+    harpoon.speed += harpoon.acceleration * dt;
+    harpoon.tip -= harpoon.speed * dt;
+    return false;
+  } else {
+    harpoon.speed = 0;
+    harpoon.tip = 0;
+    if (harpoon.timer < harpoon.duration) {
+      harpoon.timer += dt;
+      return false;
+    } else {
+      return true;
+    }
+  }
+}
+
+// HARPOON !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 document.addEventListener("keydown", (event) => {
   event.preventDefault();
   if (event.key === "ArrowRight") {
     movingRight = true;
+    if (!event.repeat) {
+      player.facing = "right";
+    }
   }
   if (event.key === "ArrowLeft") {
     movingLeft = true;
+    if (!event.repeat) {
+      player.facing = "left";
+    }
+  }
+  if (event.key === " ") {
+    if (!event.repeat) {
+      harpoon = shootHarpoon(player);
+    }
   }
 });
 document.addEventListener("keyup", (event) => {
   event.preventDefault();
   if (event.key === "ArrowRight") {
     movingRight = false;
+    if (movingLeft) {
+      player.facing = "left";
+    }
   }
   if (event.key === "ArrowLeft") {
     movingLeft = false;
+    if (movingRight) {
+      player.facing = "right";
+    }
   }
 });
 // KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

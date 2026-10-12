@@ -1,8 +1,14 @@
 #value-container {
   display: grid;
-  grid-template-columns: 10% 1fr;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
 }
-
+body {
+  display: flex;
+}
+#velocity-graph {
+  flex-grow: 0;
+}
 #player-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
