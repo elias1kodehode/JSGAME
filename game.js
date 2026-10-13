@@ -6,6 +6,7 @@ const ball = {
   radius: 20,
   vx: 200,
   vy: 0,
+  active: true,
 };
 const player = {
   height: 50,
@@ -45,11 +46,19 @@ function gameLoop(timestamp) {
   // console.log(timestamp);
   if (running) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    updateBall(ball, dt);
-    drawBall(ball);
+    if (ball.active) {
+      updateBall(ball, dt);
+      drawBall(ball);
+    }
     if (harpoon !== null) {
       if (!updateHarpoon(harpoon, dt)) {
-        drawHarpoon(harpoon);
+        if (checkHarpoonBallCollision(harpoon, ball)) {
+          console.log("HIT!");
+          ball.active = false;
+          harpoon = null;
+        } else {
+          drawHarpoon(harpoon);
+        }
       } else {
         harpoon = null;
       }
@@ -233,6 +242,14 @@ function shootHarpoon(player) {
     duration,
     timer,
   };
+}
+function checkHarpoonBallCollision(harpoon, ball) {
+  const closestY = Math.min(Math.max(ball.y, harpoon.tip), canvas.height);
+  const closestX = harpoon.shootX;
+  return (
+    Math.sqrt((closestX - ball.x) ** 2 + (closestY - ball.y) ** 2) <=
+    ball.radius
+  );
 }
 function drawHarpoon(harpoon) {
   ctx.beginPath();
