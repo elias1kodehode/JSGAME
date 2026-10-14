@@ -1,13 +1,15 @@
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
-const ball = {
-  x: 200,
-  y: 100,
-  radius: 20,
-  vx: 200,
-  vy: 0,
-  active: true,
-};
+const balls = [
+  {
+    x: 200,
+    y: 100,
+    radius: 20,
+    vx: 200,
+    vy: 0,
+    active: true,
+  },
+];
 const player = {
   height: 50,
   width: 30,
@@ -46,27 +48,47 @@ function gameLoop(timestamp) {
   // console.log(timestamp);
   if (running) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (ball.active) {
+    // if (ball.active) {
+    //   updateBall(ball, dt);
+    //   drawBall(ball);
+    // }
+    balls.forEach((ball) => {
       updateBall(ball, dt);
       drawBall(ball);
-    }
+
+      checkPlayerBallCollision(player, ball);
+    });
+    // console.log("player", player);
     if (harpoon !== null) {
-      if (!updateHarpoon(harpoon, dt)) {
-        if (checkHarpoonBallCollision(harpoon, ball)) {
-          console.log("HIT!");
-          ball.active = false;
-          harpoon = null;
-        } else {
-          drawHarpoon(harpoon);
-        }
-      } else {
-        harpoon = null;
+      const hitBall = balls.find((ball) => {
+        return checkHarpoonBallCollision(harpoon, ball);
+      });
+      if (hitBall) {
+        balls.splice(balls.indexOf(hitBall), 1);
       }
     }
-    // console.log("player", player);
+    for (let i = harpoons.length - 1; i >= 0; i--) {
+      if (updateHarpoon(harpoons[i], dt)) {
+        harpoons.splice(i, 1);
+      } else {
+        drawHarpoon(harpoons[i]);
+      }
+    }
+    //   if (!updateHarpoon(harpoon, dt)) {
+    //     if (checkHarpoonBallCollision(harpoon, ball)) {
+    //       console.log("HIT!");
+    //       ball.active = false;
+    //       harpoon = null;
+    //     } else {
+    //       drawHarpoon(harpoon);
+    //     }
+    //   } else {
+    //     harpoon = null;
+    //   }
+    // }
     updatePlayer(player, dt);
     drawPlayer(player);
-    checkPlayerBallCollision(player, ball);
+
     updatePlayerInfo(player);
 
     recordPlayerVelocity(player, dt);
@@ -114,13 +136,13 @@ function checkPlayerBallCollision(player, ball) {
 
 // PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawPlayer(player) {
-  const isHit = checkPlayerBallCollision(player, ball);
+  // const isHit = checkPlayerBallCollision(player, ball);
 
-  if (isHit) {
-    ctx.fillStyle = "red";
-  } else {
-    ctx.fillStyle = "blue";
-  }
+  // if (isHit) {
+  //   ctx.fillStyle = "red";
+  // } else {
+  //   ctx.fillStyle = "blue";
+  // }
 
   ctx.fillRect(player.x, player.y, player.width, player.height);
 }
@@ -292,8 +314,13 @@ document.addEventListener("keydown", (event) => {
   }
   if (event.key === " ") {
     if (!event.repeat) {
-      harpoon = shootHarpoon(player);
+      if (harpoons.length < player.maxHarpoons) {
+        harpoons.push(shootHarpoon(player));
+      }
     }
+  }
+  if (event.key === "Enter") {
+    ball.active = true;
   }
 });
 document.addEventListener("keyup", (event) => {
