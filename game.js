@@ -4,10 +4,9 @@ const balls = [
   {
     x: 200,
     y: 100,
-    radius: 20,
+    radius: 40,
     vx: 200,
     vy: 0,
-    active: true,
   },
 ];
 const player = {
@@ -34,7 +33,7 @@ const bounceSpeed = 400;
 let lastTime = 0;
 let running = true;
 
-// GAMELOOP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !GAMELOOP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function gameLoop(timestamp) {
   if (!lastTime) {
     lastTime = timestamp;
@@ -44,48 +43,36 @@ function gameLoop(timestamp) {
     dt = 0;
   }
   lastTime = timestamp;
-  // console.log("dt: " + dt);
-  // console.log(timestamp);
   if (running) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // if (ball.active) {
-    //   updateBall(ball, dt);
-    //   drawBall(ball);
-    // }
     balls.forEach((ball) => {
       updateBall(ball, dt);
-      drawBall(ball);
-
       checkPlayerBallCollision(player, ball);
     });
-    // console.log("player", player);
-    if (harpoon !== null) {
-      const hitBall = balls.find((ball) => {
-        return checkHarpoonBallCollision(harpoon, ball);
-      });
-      if (hitBall) {
-        balls.splice(balls.indexOf(hitBall), 1);
-      }
-    }
+    checkAllBallCollisions(balls);
+    balls.forEach((ball) => {
+      drawBall(ball);
+    });
+
     for (let i = harpoons.length - 1; i >= 0; i--) {
       if (updateHarpoon(harpoons[i], dt)) {
         harpoons.splice(i, 1);
       } else {
-        drawHarpoon(harpoons[i]);
+        const hitBall = balls.find((ball) => {
+          return checkHarpoonBallCollision(harpoons[i], ball);
+        });
+        if (hitBall) {
+          balls.splice(balls.indexOf(hitBall), 1);
+          harpoons.splice(i, 1);
+          if (hitBall.radius > 10) {
+            balls.push(...splitBall(hitBall));
+          }
+        } else {
+          drawHarpoon(harpoons[i]);
+        }
       }
     }
-    //   if (!updateHarpoon(harpoon, dt)) {
-    //     if (checkHarpoonBallCollision(harpoon, ball)) {
-    //       console.log("HIT!");
-    //       ball.active = false;
-    //       harpoon = null;
-    //     } else {
-    //       drawHarpoon(harpoon);
-    //     }
-    //   } else {
-    //     harpoon = null;
-    //   }
-    // }
+
     updatePlayer(player, dt);
     drawPlayer(player);
 
@@ -104,6 +91,61 @@ function drawBall(ball) {
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
   ctx.stroke();
+}
+function splitBall(parent) {
+  const leftChild = {
+    x: parent.x - parent.radius / 2,
+    y: parent.y,
+    vx: parent.vx / 2,
+    vy: parent.vy / 2,
+    radius: parent.radius / 2,
+  };
+  const rightChild = {
+    x: parent.x + parent.radius / 2,
+    y: parent.y,
+    vx: parent.vx / 2,
+    vy: parent.vy / 2,
+    radius: parent.radius / 2,
+  };
+  const splitImpulse = 150;
+  leftChild.vx -= splitImpulse;
+  rightChild.vx += splitImpulse;
+  const verticalSplitImpulse = 300;
+  leftChild.vy -= verticalSplitImpulse;
+  rightChild.vy -= verticalSplitImpulse;
+
+  return [leftChild, rightChild];
+}
+
+function checkBallBallCollision(ballA, ballB) {
+  const distance = Math.sqrt(
+    (ballB.x - ballA.x) ** 2 + (ballB.y - ballA.y) ** 2,
+  );
+
+  const normalVectorX = (ballB.x - ballA.x) / distance;
+  const normalVectorY = (ballB.y - ballA.y) / distance;
+
+  const relativeVx = ballB.vx - ballA.vx;
+  const relativeVy = ballB.vy - ballA.vy;
+
+  const relativeDot = normalVectorX * relativeVx + normalVectorY * relativeVy;
+  if (relativeDot < 0) {
+    //Collision
+  }
+  if (distance <= ballA.radius + ballB.radius) {
+    return true;
+  } else {
+    return false;
+  }
+}
+function checkAllBallCollisions(balls) {
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i + 1; j < balls.length; j++) {
+      if (checkBallBallCollision(balls[i], balls[j])) {
+        console.log("balls!");
+      }
+    }
+  }
 }
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -320,7 +362,13 @@ document.addEventListener("keydown", (event) => {
     }
   }
   if (event.key === "Enter") {
-    ball.active = true;
+    balls.push({
+      x: Math.floor(Math.random() * 100) + 100,
+      y: Math.floor(Math.random() * 100) + 100,
+      radius: 40,
+      vx: Math.floor(Math.random() * 100) + 100,
+      vy: 0,
+    });
   }
 });
 document.addEventListener("keyup", (event) => {
