@@ -49,8 +49,13 @@ function gameLoop(timestamp) {
       updateBall(ball, dt);
       checkPlayerBallCollision(player, ball);
     });
-    checkAllBallCollisions(balls);
+    const collisionIterations = 3;
+    for (let index = 0; index < collisionIterations; index++) {
+      checkAllBallCollisions(balls);
+    }
+
     balls.forEach((ball) => {
+      correctBallBoundaries(ball);
       drawBall(ball);
     });
 
@@ -129,21 +134,65 @@ function checkBallBallCollision(ballA, ballB) {
   const relativeVy = ballB.vy - ballA.vy;
 
   const relativeDot = normalVectorX * relativeVx + normalVectorY * relativeVy;
-  if (relativeDot < 0) {
-    //Collision
-  }
+
   if (distance <= ballA.radius + ballB.radius) {
-    return true;
+    return { distance, normalVectorX, normalVectorY, relativeDot };
   } else {
-    return false;
+    return null;
+  }
+}
+function resolveBallCollision(ballA, ballB, collision) {
+  const massA = ballA.radius ** 2;
+  const massB = ballB.radius ** 2;
+  const e = 1;
+  const collisionImpulse =
+    -((1 + e) * collision.relativeDot) / (1 / massA + 1 / massB);
+
+  const overlap = ballA.radius + ballB.radius - collision.distance;
+  const correctionA = overlap * (massB / (massA + massB));
+  const correctionB = overlap * (massA / (massA + massB));
+
+  ballA.x += -(correctionA * collision.normalVectorX);
+  ballB.x += correctionB * collision.normalVectorX;
+  ballA.y += -(correctionA * collision.normalVectorY);
+  ballB.y += correctionB * collision.normalVectorY;
+
+  if (collision.relativeDot >= 0) {
+    //NO IMPULSE BALLS ARE NOT APPROACHING EACHOTHER
+  } else {
+    ballA.vx += -(collisionImpulse / massA) * collision.normalVectorX;
+    ballB.vx += (collisionImpulse / massB) * collision.normalVectorX;
+    ballA.vy += -(collisionImpulse / massA) * collision.normalVectorY;
+    ballB.vy += (collisionImpulse / massB) * collision.normalVectorY;
   }
 }
 function checkAllBallCollisions(balls) {
   for (let i = 0; i < balls.length; i++) {
     for (let j = i + 1; j < balls.length; j++) {
-      if (checkBallBallCollision(balls[i], balls[j])) {
-        console.log("balls!");
+      const collision = checkBallBallCollision(balls[i], balls[j]);
+      if (collision) {
+        resolveBallCollision(balls[i], balls[j], collision);
       }
+    }
+  }
+}
+function correctBallBoundaries(ball) {
+  if (ball.x - ball.radius < 0) {
+    ball.x = ball.radius;
+    if (ball.vx < 0) {
+      ball.vx = -ball.vx;
+    }
+  }
+  if (ball.x + ball.radius > canvas.width) {
+    ball.x = canvas.width - ball.radius;
+    if (ball.vx > 0) {
+      ball.vx = -ball.vx;
+    }
+  }
+  if (ball.y + ball.radius > canvas.height) {
+    ball.y = canvas.height - ball.radius;
+    if (ball.vy > 0) {
+      ball.vy = -ball.vy;
     }
   }
 }
