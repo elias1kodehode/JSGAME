@@ -14,3 +14,19 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
+.game-container {
+  display: flex;
+  flex-direction: column;
+}
+#top-hud {
+  display: flex;
+  padding: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+#life-container {
+  display: flex;
+}
+canvas {
+  display: block;
+}

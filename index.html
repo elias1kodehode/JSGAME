@@ -1,39 +1,60 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Document</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
+  <body>
+    <div class="game-container">
+      <div class="top-hud">
+        <div id="life-container"></div>
+        <div id="survival-time"></div>
+        <div id="currency"></div>
+      </div>
+      <canvas id="game" width="800" height="600"></canvas>
+    </div>
 
-<body>
-  <canvas id="game" width="800" height="600"></canvas>
-
-  <div id="debug-panel">
-    <canvas id="velocity-graph" width="500" height="200"></canvas>
-    <div>
-      Acceleration:
-      <input type="range" name="acceleration" id="acceleration-slider" min="100" max="2000" step="100" value="500" />
+    <div id="debug-panel">
+      <canvas id="velocity-graph" width="500" height="200"></canvas>
+      <div>
+        Acceleration:
+        <input
+          type="range"
+          name="acceleration"
+          id="acceleration-slider"
+          min="100"
+          max="2000"
+          step="100"
+          value="500"
+        />
+      </div>
+      <div>
+        Deceleration:
+        <input
+          type="range"
+          name="deceleration"
+          id="deceleration-slider"
+          min="100"
+          max="2000"
+          step="100"
+          value="500"
+        />
+      </div>
+      <div id="value-container">
+        <p>Acceleration:</p>
+        <p id="acceleration-value"></p>
+        <p>Deceleration:</p>
+        <p id="deceleration-value"></p>
+      </div>
+      <div id="player-info">
+        <p>Position: <span id="player-x">0</span></p>
+        <p>Velocity: <span id="player-vx">0</span></p>
+        <p>Acceleration: <span id="player-acceleration">500</span></p>
+      </div>
     </div>
-    <div>
-      Deceleration:
-      <input type="range" name="deceleration" id="deceleration-slider" min="100" max="2000" step="100" value="500" />
-    </div>
-    <div id="value-container">
-      <p>Acceleration:</p>
-      <p id="acceleration-value"></p>
-      <p>Deceleration:</p>
-      <p id="deceleration-value"></p>
-    </div>
-    <div id="player-info">
-      <p>Position: <span id="player-x">0</span></p>
-      <p>Velocity: <span id="player-vx">0</span></p>
-      <p>Acceleration: <span id="player-acceleration">500</span></p>
-    </div>
-  </div>
-</body>
-<script src="game.js"></script>
-
+  </body>
+  <script src="game.js"></script>
 </html>

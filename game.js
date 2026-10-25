@@ -23,6 +23,12 @@ const player = {
   facing: "right",
   maxHarpoons: 1,
 };
+const game = {
+  survivalTime: 0,
+  currency: 0,
+  lives: 1,
+  state: "playing",
+};
 let harpoon = null;
 let harpoons = [];
 let movingRight = false;
@@ -31,7 +37,6 @@ let movingLeft = false;
 const gravity = 1000;
 const bounceSpeed = 400;
 let lastTime = 0;
-let running = true;
 
 // !GAMELOOP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function gameLoop(timestamp) {
@@ -43,7 +48,7 @@ function gameLoop(timestamp) {
     dt = 0;
   }
   lastTime = timestamp;
-  if (running) {
+  if (game.state === "playing") {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     balls.forEach((ball) => {
       updateBall(ball, dt);
@@ -85,12 +90,20 @@ function gameLoop(timestamp) {
 
     recordPlayerVelocity(player, dt);
     drawVelocityGraph();
-    requestAnimationFrame(gameLoop);
+    game.survivalTime += dt;
+    showTime();
   }
+  requestAnimationFrame(gameLoop);
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+// !TIMER!!!!!!!!!!!!!
+let timer = document.getElementById("survival-time");
+function showTime() {
+  const minutes = Math.floor(game.survivalTime / 60);
+  const seconds = Math.floor(game.survivalTime % 60);
+  timer.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawBall(ball) {
   ctx.beginPath();
