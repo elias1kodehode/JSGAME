@@ -98,11 +98,11 @@ function updateGame(dt) {
     correctBallBoundaries(ball);
   });
 
+  updateHarpoons(dt);
   if (balls.some((ball) => checkPlayerObjectCollision(player, ball))) {
     endGame();
     return;
   }
-  updateHarpoons(dt);
   updateCoins(dt);
   updatePlayerInfo(player);
   updateSpawning();
