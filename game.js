@@ -1,14 +1,6 @@
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
-const balls = [
-  {
-    x: 200,
-    y: 100,
-    radius: 40,
-    vx: 200,
-    vy: 0,
-  },
-];
+const balls = [];
 const player = {
   height: 50,
   width: 30,
@@ -26,11 +18,42 @@ const player = {
 const game = {
   survivalTime: 0,
   currency: 0,
+  bankedCurrency: Number(localStorage.getItem("bankedCurrency") ?? 0),
   lives: 1,
   state: "playing",
+  spawnInterval: 10,
+  nextSpawnTime: 10,
+  ballsPerSpawn: 1,
+};
+const upgrades = {
+  //player
+  lives: 0,
+  invincibility: 0,
+  //movement
+  acceleration: 0,
+  braking: 0,
+  maxSpeed: 0,
+  //Harpoon
+  maxHarpoons: 0,
+  harpoonSpeed: 0,
+  harpoonDuration: 0,
+  harpoonPierce: 0,
+};
+const upgradeConfig = {
+  acceleration: {
+    bonusPerLevel: 50,
+    baseCost: 5,
+    maxLevel: 20,
+  },
+};
+const baseStats = {
+  acceleration: 500,
+  braking: 700,
+  maxSpeed: 300,
 };
 let harpoon = null;
 let harpoons = [];
+const coins = [];
 let movingRight = false;
 let movingLeft = false;
 
@@ -48,55 +71,192 @@ function gameLoop(timestamp) {
     dt = 0;
   }
   lastTime = timestamp;
+
   if (game.state === "playing") {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    balls.forEach((ball) => {
-      updateBall(ball, dt);
-      checkPlayerBallCollision(player, ball);
-    });
-    const collisionIterations = 3;
-    for (let index = 0; index < collisionIterations; index++) {
-      checkAllBallCollisions(balls);
-    }
-
-    balls.forEach((ball) => {
-      correctBallBoundaries(ball);
-      drawBall(ball);
-    });
-
-    for (let i = harpoons.length - 1; i >= 0; i--) {
-      if (updateHarpoon(harpoons[i], dt)) {
-        harpoons.splice(i, 1);
-      } else {
-        const hitBall = balls.find((ball) => {
-          return checkHarpoonBallCollision(harpoons[i], ball);
-        });
-        if (hitBall) {
-          balls.splice(balls.indexOf(hitBall), 1);
-          harpoons.splice(i, 1);
-          if (hitBall.radius > 10) {
-            balls.push(...splitBall(hitBall));
-          }
-        } else {
-          drawHarpoon(harpoons[i]);
-        }
-      }
-    }
-
-    updatePlayer(player, dt);
-    drawPlayer(player);
-
-    updatePlayerInfo(player);
-
+    updateGame(dt);
     recordPlayerVelocity(player, dt);
     drawVelocityGraph();
-    game.survivalTime += dt;
     showTime();
   }
+  drawGame();
   requestAnimationFrame(gameLoop);
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !UPDATE GAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function updateGame(dt) {
+  const collisionIterations = 3;
+
+  balls.forEach((ball) => {
+    updateBall(ball, dt);
+  });
+  updatePlayer(player, dt);
+  for (let index = 0; index < collisionIterations; index++) {
+    checkAllBallCollisions(balls);
+  }
+  balls.forEach((ball) => {
+    correctBallBoundaries(ball);
+  });
+
+  if (balls.some((ball) => checkPlayerObjectCollision(player, ball))) {
+    endGame();
+    return;
+  }
+  updateHarpoons(dt);
+  updateCoins(dt);
+  updatePlayerInfo(player);
+  updateSpawning();
+  game.survivalTime += dt;
+}
+
+function updateHarpoons(dt) {
+  for (let i = harpoons.length - 1; i >= 0; i--) {
+    if (updateHarpoon(harpoons[i], dt)) {
+      harpoons.splice(i, 1);
+    } else {
+      const hitBall = balls.find((ball) => {
+        return checkHarpoonBallCollision(harpoons[i], ball);
+      });
+      if (hitBall) {
+        balls.splice(balls.indexOf(hitBall), 1);
+        harpoons.splice(i, 1);
+        if (hitBall.radius > 10) {
+          balls.push(...splitBall(hitBall));
+        } else {
+          spawnCoin(hitBall.x, hitBall.y);
+        }
+      }
+    }
+  }
+}
+
+function updateSpawning() {
+  if (game.survivalTime >= game.nextSpawnTime) {
+    for (let i = 0; i < game.ballsPerSpawn; i++) {
+      const randomVx = Math.random() < 0.5 ? -200 : 200;
+      const randomX = Math.floor(Math.random() * (canvas.width - 40 - 40) + 40);
+      balls.push({
+        x: randomX,
+        y: 40,
+        radius: 40,
+        vx: randomVx,
+        vy: 0,
+      });
+    }
+    game.nextSpawnTime += game.spawnInterval;
+  }
+}
+
+// !DRAW GAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function drawGame() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  balls.forEach((ball) => {
+    drawBall(ball);
+  });
+  drawCoins();
+  drawHarpoons();
+  drawPlayer(player);
+}
+function drawHarpoons() {
+  harpoons.forEach((harpoon) => {
+    drawHarpoon(harpoon);
+  });
+}
+// !STORAGE!!!!!!!!!!!!!!!!!!!!!
+function storeToLocal(key, value) {}
+// !GAME STATES!!!!!!!!!!!!!
+function endGame() {
+  if (game.state === "playing") {
+    game.state = "gameOver";
+    game.bankedCurrency += game.currency;
+    localStorage.setItem("bankedCurrency", game.bankedCurrency);
+    console.log(game.bankedCurrency);
+  }
+  updateUi();
+}
+function restartGame() {
+  game.ballsPerSpawn = 1;
+  game.nextSpawnTime = game.spawnInterval;
+  game.survivalTime = 0;
+  game.currency = 0;
+  player.x = 0;
+  player.vx = 0;
+  player.movingLeft = false;
+  player.movingRight = false;
+  harpoons.length = 0;
+  coins.length = 0;
+  initializeBalls();
+  game.state = "playing";
+  updateUi();
+}
+const restartButton = document.getElementById("restart-button");
+restartButton.addEventListener("click", restartGame);
+
+function initializeBalls() {
+  balls.length = 0;
+  balls.push({
+    x: 200,
+    y: 100,
+    radius: 40,
+    vx: 200,
+    vy: 0,
+  });
+}
+// !UI!!!!!!!!!!!!!
+function updateUi() {
+  const overlay = document.getElementById("game-over-overlay");
+  overlay.classList.toggle("visible", game.state === "gameOver");
+  document.getElementById("survival-time-text").innerText = timer.innerText;
+  document.getElementById("coins-acquired-text").innerText = game.currency;
+}
+// !COINS!!!!!!!!!!!!!!!
+function spawnCoin(x, y) {
+  coins.push({
+    x: x,
+    y: y,
+    radius: 8,
+    vx: 0,
+    vy: 0,
+    restitution: 0.3,
+    value: 1,
+  });
+}
+function drawCoin(coin) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(coin.x, coin.y, coin.radius, 0, 2 * Math.PI);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.restore();
+}
+function drawCoins() {
+  coins.forEach((coin) => {
+    drawCoin(coin);
+  });
+}
+function updateCoin(coin, dt) {
+  coin.vy += gravity * dt;
+  coin.y += coin.vy * dt;
+  if (coin.y + coin.radius >= canvas.height) {
+    if (Math.abs(coin.vy) <= 30) {
+      coin.vy = 0;
+      coin.y = canvas.height - coin.radius;
+    } else {
+      coin.vy = -(coin.vy * coin.restitution);
+      coin.y = canvas.height - coin.radius;
+    }
+  }
+}
+function updateCoins(dt) {
+  for (let i = coins.length - 1; i >= 0; i--) {
+    updateCoin(coins[i], dt);
+    if (checkPlayerObjectCollision(player, coins[i])) {
+      game.currency += coins[i].value;
+      coins.splice(i, 1);
+      console.log(game.currency);
+    }
+  }
+}
 // !TIMER!!!!!!!!!!!!!
 let timer = document.getElementById("survival-time");
 function showTime() {
@@ -212,28 +372,19 @@ function correctBallBoundaries(ball) {
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // PLAYER COLLISION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function checkPlayerBallCollision(player, ball) {
-  // if (
-  //   ball.x + ball.radius >= player.x &&
-  //   ball.x - ball.radius <= player.x + player.width &&
-  //   ball.y + ball.radius >= player.y &&
-  //   ball.y - ball.radius <= player.y + player.height
-  // ) {
-  //   console.log("X HIT");
-  // }
-
+function checkPlayerObjectCollision(player, object) {
   const closestX = Math.min(
-    Math.max(ball.x, player.x),
+    Math.max(object.x, player.x),
     player.x + player.width,
   );
   const closestY = Math.min(
-    Math.max(ball.y, player.y),
+    Math.max(object.y, player.y),
     player.y + player.height,
   );
 
   return (
-    Math.sqrt((closestX - ball.x) ** 2 + (closestY - ball.y) ** 2) <=
-    ball.radius
+    Math.sqrt((closestX - object.x) ** 2 + (closestY - object.y) ** 2) <=
+    object.radius
   );
 }
 // PLAYER COLLISION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -404,33 +555,35 @@ function updateHarpoon(harpoon, dt) {
 // KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 document.addEventListener("keydown", (event) => {
   event.preventDefault();
-  if (event.key === "ArrowRight") {
-    movingRight = true;
-    if (!event.repeat) {
-      player.facing = "right";
-    }
-  }
-  if (event.key === "ArrowLeft") {
-    movingLeft = true;
-    if (!event.repeat) {
-      player.facing = "left";
-    }
-  }
-  if (event.key === " ") {
-    if (!event.repeat) {
-      if (harpoons.length < player.maxHarpoons) {
-        harpoons.push(shootHarpoon(player));
+  if (game.state === "playing") {
+    if (event.key === "ArrowRight") {
+      movingRight = true;
+      if (!event.repeat) {
+        player.facing = "right";
       }
     }
-  }
-  if (event.key === "Enter") {
-    balls.push({
-      x: Math.floor(Math.random() * 100) + 100,
-      y: Math.floor(Math.random() * 100) + 100,
-      radius: 40,
-      vx: Math.floor(Math.random() * 100) + 100,
-      vy: 0,
-    });
+    if (event.key === "ArrowLeft") {
+      movingLeft = true;
+      if (!event.repeat) {
+        player.facing = "left";
+      }
+    }
+    if (event.key === " ") {
+      if (!event.repeat) {
+        if (harpoons.length < player.maxHarpoons) {
+          harpoons.push(shootHarpoon(player));
+        }
+      }
+    }
+    if (event.key === "Enter") {
+      balls.push({
+        x: Math.floor(Math.random() * 100) + 100,
+        y: Math.floor(Math.random() * 100) + 100,
+        radius: 40,
+        vx: Math.floor(Math.random() * 100) + 100,
+        vy: 0,
+      });
+    }
   }
 });
 document.addEventListener("keyup", (event) => {
@@ -601,4 +754,5 @@ function drawVelocityGraph() {
   graphCtx.stroke();
 }
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+initializeBalls();
 requestAnimationFrame(gameLoop);

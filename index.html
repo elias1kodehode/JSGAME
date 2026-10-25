@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>ULTRAMEGAPANG</title>
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -14,7 +14,25 @@
         <div id="survival-time"></div>
         <div id="currency"></div>
       </div>
-      <canvas id="game" width="800" height="600"></canvas>
+      <div class="play-area">
+        <canvas id="game" width="800" height="600"></canvas>
+        <div id="game-over-overlay">
+          <div id="game-over-top"><h1>GAME OVER</h1></div>
+          <div id="game-over-middle">
+            <div class="text-container">
+              <h2>Survival time:</h2>
+              <p id="survival-time-text">0</p>
+            </div>
+            <div class="text-container">
+              <h2>Coins acquired:</h2>
+              <p id="coins-acquired-text">0</p>
+            </div>
+          </div>
+          <div id="game-over-bottom">
+            <button id="restart-button">Restart</button><button>Shop</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="debug-panel">
