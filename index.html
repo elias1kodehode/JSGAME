@@ -1,78 +1,72 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ULTRAMEGAPANG</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
 
-  <body>
-    <div class="game-container">
-      <div class="top-hud">
-        <div id="life-container"></div>
-        <div id="survival-time"></div>
-        <div id="currency"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULTRAMEGAPANG</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="game-container">
+    <div class="top-hud">
+      <div id="life-container"></div>
+      <div id="survival-time"></div>
+      <div id="currency"></div>
+    </div>
+    <div class="play-area">
+      <canvas id="game" width="800" height="600"></canvas>
+      <div id="shop-overlay">
+        <h1>SHOP</h1>
+        <div id="shop-container">
+          <button id="shop-back-button">Exit shop</button>
+        </div>
       </div>
-      <div class="play-area">
-        <canvas id="game" width="800" height="600"></canvas>
-        <div id="game-over-overlay">
-          <div id="game-over-top"><h1>GAME OVER</h1></div>
-          <div id="game-over-middle">
-            <div class="text-container">
-              <h2>Survival time:</h2>
-              <p id="survival-time-text">0</p>
-            </div>
-            <div class="text-container">
-              <h2>Coins acquired:</h2>
-              <p id="coins-acquired-text">0</p>
-            </div>
+      <div id="game-over-overlay">
+        <div id="game-over-top">
+          <h1>GAME OVER</h1>
+        </div>
+        <div id="game-over-middle">
+          <div class="text-container">
+            <h2>Survival time:</h2>
+            <p id="survival-time-text">0</p>
           </div>
-          <div id="game-over-bottom">
-            <button id="restart-button">Restart</button><button>Shop</button>
+          <div class="text-container">
+            <h2>Coins acquired:</h2>
+            <p id="coins-acquired-text">0</p>
           </div>
+        </div>
+        <div id="game-over-bottom">
+          <button id="restart-button">Restart</button><button id="shop-button">Shop</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div id="debug-panel">
-      <canvas id="velocity-graph" width="500" height="200"></canvas>
-      <div>
-        Acceleration:
-        <input
-          type="range"
-          name="acceleration"
-          id="acceleration-slider"
-          min="100"
-          max="2000"
-          step="100"
-          value="500"
-        />
-      </div>
-      <div>
-        Deceleration:
-        <input
-          type="range"
-          name="deceleration"
-          id="deceleration-slider"
-          min="100"
-          max="2000"
-          step="100"
-          value="500"
-        />
-      </div>
-      <div id="value-container">
-        <p>Acceleration:</p>
-        <p id="acceleration-value"></p>
-        <p>Deceleration:</p>
-        <p id="deceleration-value"></p>
-      </div>
-      <div id="player-info">
-        <p>Position: <span id="player-x">0</span></p>
-        <p>Velocity: <span id="player-vx">0</span></p>
-        <p>Acceleration: <span id="player-acceleration">500</span></p>
-      </div>
+  <div id="debug-panel">
+    <canvas id="velocity-graph" width="500" height="200"></canvas>
+    <div>
+      Acceleration:
+      <input type="range" name="acceleration" id="acceleration-slider" min="100" max="2000" step="100" value="500" />
     </div>
-  </body>
-  <script src="game.js"></script>
+    <div>
+      Deceleration:
+      <input type="range" name="deceleration" id="deceleration-slider" min="100" max="2000" step="100" value="500" />
+    </div>
+    <div id="value-container">
+      <p>Acceleration:</p>
+      <p id="acceleration-value"></p>
+      <p>Deceleration:</p>
+      <p id="deceleration-value"></p>
+    </div>
+    <div id="player-info">
+      <p>Position: <span id="player-x">0</span></p>
+      <p>Velocity: <span id="player-vx">0</span></p>
+      <p>Acceleration: <span id="player-acceleration">500</span></p>
+    </div>
+  </div>
+</body>
+<script src="game.js"></script>
+
 </html>

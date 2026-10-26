@@ -18,17 +18,31 @@ body {
   display: flex;
   flex-direction: column;
 }
-#top-hud {
-  display: flex;
+.top-hud {
+  display: grid;
   padding: 10px;
-  justify-content: space-between;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
 }
 #life-container {
   display: flex;
 }
+#currency {
+  justify-self: end;
+}
 canvas {
   display: block;
+}
+#shop-overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid black;
+  position: absolute;
+  inset: 0;
+  gap: 10px;
 }
 #game-over-overlay {
   display: flex;
@@ -65,5 +79,11 @@ canvas {
   visibility: visible;
 }
 #game-over-overlay {
+  visibility: hidden;
+}
+#shop-overlay.visible {
+  visibility: visible;
+}
+#shop-overlay {
   visibility: hidden;
 }

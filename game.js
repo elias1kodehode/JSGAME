@@ -13,7 +13,8 @@ const player = {
   maxSpeed: 300, // px/s
   restitution: 0.5,
   facing: "right",
-  maxHarpoons: 1,
+  invincibility: 1,
+  invincibilityRemaining: 0,
 };
 const game = {
   survivalTime: 0,
@@ -27,29 +28,81 @@ const game = {
 };
 const upgrades = {
   //player
-  lives: 0,
+  lives: 2,
   invincibility: 0,
   //movement
-  acceleration: 0,
-  braking: 0,
-  maxSpeed: 0,
+  acceleration: 3,
+  braking: 2,
+  maxSpeed: 1,
   //Harpoon
-  maxHarpoons: 0,
-  harpoonSpeed: 0,
-  harpoonDuration: 0,
+  maxHarpoons: 1,
+  harpoonAcceleration: 3,
+  harpoonDuration: 2,
+  harpoonPierce: 0,
+};
+const harpoonStats = {
+  maxHarpoons: 1,
+  harpoonAcceleration: 1000,
+  harpoonDuration: 2,
   harpoonPierce: 0,
 };
 const upgradeConfig = {
+  lives: {
+    bonusPerLevel: 1,
+    baseCost: 8,
+    maxLevel: 10,
+  },
+  invincibility: {
+    bonusPerLevel: 0.5,
+    baseCost: 50,
+    maxLevel: 4,
+  },
   acceleration: {
     bonusPerLevel: 50,
     baseCost: 5,
     maxLevel: 20,
   },
+  braking: {
+    bonusPerLevel: 50,
+    baseCost: 5,
+    maxLevel: 20,
+  },
+  maxSpeed: {
+    bonusPerLevel: 25,
+    baseCost: 5,
+    maxLevel: 20,
+  },
+  maxHarpoons: {
+    bonusPerLevel: 1,
+    baseCost: 15,
+    maxLevel: 5,
+  },
+  harpoonAcceleration: {
+    bonusPerLevel: 100,
+    baseCost: 10,
+    maxLevel: 10,
+  },
+  harpoonDuration: {
+    bonusPerLevel: 0.5,
+    baseCost: 10,
+    maxLevel: 10,
+  },
+  harpoonPierce: {
+    bonusPerLevel: 1,
+    baseCost: 35,
+    maxLevel: 5,
+  },
 };
 const baseStats = {
+  lives: 1,
+  invincibility: 1,
   acceleration: 500,
   braking: 700,
   maxSpeed: 300,
+  maxHarpoons: 1,
+  harpoonAcceleration: 1000,
+  harpoonDuration: 2,
+  harpoonPierce: 0,
 };
 let harpoon = null;
 let harpoons = [];
@@ -60,7 +113,28 @@ let movingLeft = false;
 const gravity = 1000;
 const bounceSpeed = 400;
 let lastTime = 0;
+// !PLAYERSTATS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function applyUpgrades() {
+  game.lives = calculateStat("lives");
+  player.invincibility = calculateStat("invincibility");
+  player.acceleration = calculateStat("acceleration");
+  player.deceleration = calculateStat("braking");
+  player.maxSpeed = calculateStat("maxSpeed");
+  harpoonStats.maxHarpoons = calculateStat("maxHarpoons");
+  harpoonStats.harpoonAcceleration = calculateStat("harpoonAcceleration");
+  harpoonStats.harpoonDuration = calculateStat("harpoonDuration");
+  harpoonStats.harpoonPierce = calculateStat("harpoonPierce");
 
+  // for (let key in upgrades) {
+  //   if (upgradeConfig[key] !== undefined) {
+  //     player[key] =
+  //       baseStats[key] + upgrades[key] * upgradeConfig[key].bonusPerLevel;
+  //   }
+  // }
+}
+function calculateStat(key) {
+  return baseStats[key] + upgrades[key] * upgradeConfig[key].bonusPerLevel;
+}
 // !GAMELOOP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function gameLoop(timestamp) {
   if (!lastTime) {
@@ -74,6 +148,7 @@ function gameLoop(timestamp) {
 
   if (game.state === "playing") {
     updateGame(dt);
+    invincibilityTimer(dt);
     recordPlayerVelocity(player, dt);
     drawVelocityGraph();
     showTime();
@@ -99,9 +174,16 @@ function updateGame(dt) {
   });
 
   updateHarpoons(dt);
-  if (balls.some((ball) => checkPlayerObjectCollision(player, ball))) {
-    endGame();
-    return;
+  if (
+    player.invincibilityRemaining === 0 &&
+    balls.some((ball) => checkPlayerObjectCollision(player, ball))
+  ) {
+    game.lives--;
+    if (game.lives === 0) {
+      endGame();
+      return;
+    }
+    player.invincibilityRemaining = player.invincibility;
   }
   updateCoins(dt);
   updatePlayerInfo(player);
@@ -170,7 +252,16 @@ function endGame() {
     game.state = "gameOver";
     game.bankedCurrency += game.currency;
     localStorage.setItem("bankedCurrency", game.bankedCurrency);
-    console.log(game.bankedCurrency);
+    console.log("Banked currency: " + game.bankedCurrency);
+    console.log("Acceleration: " + player.acceleration);
+    console.log("Deceleration: " + player.deceleration);
+    console.log("Lives: " + game.lives);
+    console.log("maxHarpoons: " + harpoonStats.maxHarpoons);
+    console.log("maxSpeed: " + player.maxSpeed);
+    console.log("harpoonAcceleration: " + harpoonStats.harpoonAcceleration);
+    console.log("harpoonDuration: " + harpoonStats.harpoonDuration);
+
+    console.log(": " + player);
   }
   updateUi();
 }
@@ -181,16 +272,15 @@ function restartGame() {
   game.currency = 0;
   player.x = 0;
   player.vx = 0;
-  player.movingLeft = false;
-  player.movingRight = false;
+  movingLeft = false;
+  movingRight = false;
   harpoons.length = 0;
   coins.length = 0;
   initializeBalls();
+  applyUpgrades();
   game.state = "playing";
   updateUi();
 }
-const restartButton = document.getElementById("restart-button");
-restartButton.addEventListener("click", restartGame);
 
 function initializeBalls() {
   balls.length = 0;
@@ -203,12 +293,45 @@ function initializeBalls() {
   });
 }
 // !UI!!!!!!!!!!!!!
+const restartButton = document.getElementById("restart-button");
+restartButton.addEventListener("click", restartGame);
+
+const shopButton = document.getElementById("shop-button");
+shopButton.addEventListener("click", openShop);
+
+const exitShopButton = document.getElementById("shop-back-button");
+exitShopButton.addEventListener("click", closeShop);
+
 function updateUi() {
   const overlay = document.getElementById("game-over-overlay");
   overlay.classList.toggle("visible", game.state === "gameOver");
   document.getElementById("survival-time-text").innerText = timer.innerText;
   document.getElementById("coins-acquired-text").innerText = game.currency;
+  const shopOverlay = document.getElementById("shop-overlay");
+  shopOverlay.classList.toggle("visible", game.state === "shop");
 }
+function openShop() {
+  game.state = "shop";
+  populateShop();
+  updateUi();
+}
+function closeShop() {
+  game.state = "gameOver";
+  updateUi();
+}
+function populateShop() {
+  for (const [key, config] of Object.entries(upgradeConfig)) {
+    const card = document.createElement("div");
+
+    card.textContent = `${upgrades[key]}/${config.maxLevel} ${key} - PRICE: ${config.baseCost}`;
+
+    document.getElementById("shop-container").append(card);
+    const buyButton = document.createElement("button");
+
+    console.log(key + " costs " + config.baseCost + " coins");
+  }
+}
+function buyUpgrade(key) {}
 // !COINS!!!!!!!!!!!!!!!
 function spawnCoin(x, y) {
   coins.push({
@@ -263,6 +386,12 @@ function showTime() {
   const minutes = Math.floor(game.survivalTime / 60);
   const seconds = Math.floor(game.survivalTime % 60);
   timer.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  document.getElementById("life-container").innerText =
+    "❤️".repeat(game.lives) + "🖤".repeat(calculateStat("lives") - game.lives);
+
+  document.getElementById("currency").innerText =
+    `${game.currency}🪙 (${game.bankedCurrency}💰)`;
 }
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawBall(ball) {
@@ -388,18 +517,22 @@ function checkPlayerObjectCollision(player, object) {
   );
 }
 // PLAYER COLLISION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+function invincibilityTimer(dt) {
+  player.invincibilityRemaining = Math.max(
+    player.invincibilityRemaining - dt,
+    0,
+  );
+}
 // PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawPlayer(player) {
-  // const isHit = checkPlayerBallCollision(player, ball);
-
-  // if (isHit) {
-  //   ctx.fillStyle = "red";
-  // } else {
-  //   ctx.fillStyle = "blue";
-  // }
+  ctx.save();
+  if (player.invincibilityRemaining !== 0) {
+    ctx.globalAlpha =
+      0.65 + 0.3 * Math.sin(2 * Math.PI * 3 * player.invincibilityRemaining);
+  }
 
   ctx.fillRect(player.x, player.y, player.width, player.height);
+  ctx.restore();
 }
 function updatePlayer(player, dt) {
   // NEW MOVEMENT
@@ -451,46 +584,6 @@ function updatePlayer(player, dt) {
     player.x = 0;
     player.vx = -player.vx * player.restitution;
   }
-
-  // SpeedlimitCHECK
-  // if (-player.maxSpeed > player.vx && player.vx < player.maxSpeed) {
-  // }
-
-  // if (player.vx < 0 && movingRight) {
-  //   player.vx += player.acceleration * player.reversalMultiplier * dt;
-  // } else if (movingRight) {
-  //   player.vx += player.acceleration * dt;
-  // }
-
-  // if (movingLeft) {
-  //   player.vx -= player.acceleration * dt;
-  // }
-  // if (player.vx > player.maxSpeed) {
-  //   player.vx = player.maxSpeed;
-  // }
-  // if (player.vx < -player.maxSpeed) {
-  //   player.vx = -player.maxSpeed;
-  // }
-
-  // player.x += player.vx * dt;
-
-  // if (player.vx > 0 && movingLeft) {
-  //   // Reversing from right to left
-  // }
-  // if (movingLeft === movingRight) {
-  // if (player.vx > 0) {
-  //   player.vx = Math.max(0, player.vx - player.deceleration * dt);
-  // } else if (player.vx < 0) {
-  //   player.vx = Math.min(0, player.vx + player.deceleration * dt);
-  // } else {
-  //   player.vx = 0;
-  // }
-  // }
-  // console.log({
-  //   x: player.x,
-  //   vx: player.vx,
-  //   restitution: player.restitution,
-  // });
 }
 // PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // HARPOON !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -500,8 +593,8 @@ function shootHarpoon(player) {
   let shootX;
   let tip = shootY;
   let speed = 0;
-  let acceleration = 1000;
-  let duration = 2;
+  let acceleration = harpoonStats.harpoonAcceleration;
+  let duration = harpoonStats.harpoonDuration;
   let timer = 0;
   if (player.facing === "right") {
     shootX = player.x + player.width;
@@ -570,7 +663,7 @@ document.addEventListener("keydown", (event) => {
     }
     if (event.key === " ") {
       if (!event.repeat) {
-        if (harpoons.length < player.maxHarpoons) {
+        if (harpoons.length < harpoonStats.maxHarpoons) {
           harpoons.push(shootHarpoon(player));
         }
       }
@@ -754,5 +847,6 @@ function drawVelocityGraph() {
   graphCtx.stroke();
 }
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+applyUpgrades();
 initializeBalls();
 requestAnimationFrame(gameLoop);
