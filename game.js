@@ -20,6 +20,7 @@ const game = {
   survivalTime: 0,
   currency: 0,
   endCurrency: 0,
+  longestSurvivalTime: Number(localStorage.getItem("longestSurvivalTime") ?? 0),
   bankedCurrency: Number(localStorage.getItem("bankedCurrency") ?? 0),
   lives: 1,
   state: "playing",
@@ -256,6 +257,10 @@ function endGame() {
     game.bankedCurrency += game.currency;
     game.endCurrency = game.currency;
     game.currency = 0;
+    if (game.survivalTime > game.longestSurvivalTime) {
+      game.longestSurvivalTime = game.survivalTime;
+      storeLongestSurvivalTime();
+    }
     storeBankedCurrency();
     console.log("Banked currency: " + game.bankedCurrency);
     console.log("Acceleration: " + player.acceleration);
@@ -269,6 +274,9 @@ function endGame() {
     console.log(": " + player);
   }
   updateUi();
+}
+function storeLongestSurvivalTime() {
+  localStorage.setItem("longestSurvivalTime", game.longestSurvivalTime);
 }
 function restartGame() {
   game.ballsPerSpawn = 1;
@@ -310,12 +318,18 @@ exitShopButton.addEventListener("click", closeShop);
 function updateUi() {
   const overlay = document.getElementById("game-over-overlay");
   overlay.classList.toggle("visible", game.state === "gameOver");
-  document.getElementById("survival-time-text").innerText = timer.innerText;
+  document.getElementById("survival-time-text").innerText =
+    timer.innerText + " (" + fixTime(game.longestSurvivalTime) + ")";
   document.getElementById("coins-acquired-text").innerText = game.endCurrency;
   const shopOverlay = document.getElementById("shop-overlay");
   shopOverlay.classList.toggle("visible", game.state === "shop");
   updateCurrency();
   updateLives();
+}
+function fixTime(time) {
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 function openShop() {
   game.state = "shop";
@@ -378,6 +392,8 @@ function resetAllUpgrades() {
   }
   game.bankedCurrency = 0;
   storeBankedCurrency();
+  game.longestSurvivalTime = 0;
+  storeLongestSurvivalTime();
   storeStatsToLocal();
   updateUi();
 }
@@ -582,12 +598,23 @@ function invincibilityTimer(dt) {
 // PLAYER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawPlayer(player) {
   ctx.save();
+
   if (player.invincibilityRemaining !== 0) {
     ctx.globalAlpha =
       0.65 + 0.3 * Math.sin(2 * Math.PI * 3 * player.invincibilityRemaining);
   }
-
+  let eyeX;
+  const eyeY = player.y + 5;
+  if (player.facing === "left") {
+    eyeX = player.x + 4;
+  } else if (player.facing === "right") {
+    eyeX = player.x + player.width - 4;
+  }
   ctx.fillRect(player.x, player.y, player.width, player.height);
+  ctx.beginPath();
+  ctx.arc(eyeX, eyeY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = "white";
+  ctx.fill();
   ctx.restore();
 }
 function updatePlayer(player, dt) {
