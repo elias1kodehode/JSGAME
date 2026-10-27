@@ -19,6 +19,7 @@ const player = {
 const game = {
   survivalTime: 0,
   currency: 0,
+  endCurrency: 0,
   bankedCurrency: Number(localStorage.getItem("bankedCurrency") ?? 0),
   lives: 1,
   state: "playing",
@@ -28,16 +29,16 @@ const game = {
 };
 const upgrades = {
   //player
-  lives: 2,
+  lives: 0,
   invincibility: 0,
   //movement
-  acceleration: 3,
-  braking: 2,
-  maxSpeed: 1,
+  acceleration: 0,
+  braking: 0,
+  maxSpeed: 0,
   //Harpoon
-  maxHarpoons: 1,
-  harpoonAcceleration: 3,
-  harpoonDuration: 2,
+  maxHarpoons: 0,
+  harpoonAcceleration: 0,
+  harpoonDuration: 0,
   harpoonPierce: 0,
 };
 const harpoonStats = {
@@ -149,8 +150,8 @@ function gameLoop(timestamp) {
   if (game.state === "playing") {
     updateGame(dt);
     invincibilityTimer(dt);
-    recordPlayerVelocity(player, dt);
-    drawVelocityGraph();
+    // DIAG recordPlayerVelocity(player, dt);
+    // DIAG drawVelocityGraph();
     showTime();
   }
   drawGame();
@@ -179,6 +180,7 @@ function updateGame(dt) {
     balls.some((ball) => checkPlayerObjectCollision(player, ball))
   ) {
     game.lives--;
+    updateLives();
     if (game.lives === 0) {
       endGame();
       return;
@@ -186,7 +188,8 @@ function updateGame(dt) {
     player.invincibilityRemaining = player.invincibility;
   }
   updateCoins(dt);
-  updatePlayerInfo(player);
+  //DIAG COMMENT OUT
+  //updatePlayerInfo(player);
   updateSpawning();
   game.survivalTime += dt;
 }
@@ -251,7 +254,9 @@ function endGame() {
   if (game.state === "playing") {
     game.state = "gameOver";
     game.bankedCurrency += game.currency;
-    localStorage.setItem("bankedCurrency", game.bankedCurrency);
+    game.endCurrency = game.currency;
+    game.currency = 0;
+    storeBankedCurrency();
     console.log("Banked currency: " + game.bankedCurrency);
     console.log("Acceleration: " + player.acceleration);
     console.log("Deceleration: " + player.deceleration);
@@ -306,9 +311,11 @@ function updateUi() {
   const overlay = document.getElementById("game-over-overlay");
   overlay.classList.toggle("visible", game.state === "gameOver");
   document.getElementById("survival-time-text").innerText = timer.innerText;
-  document.getElementById("coins-acquired-text").innerText = game.currency;
+  document.getElementById("coins-acquired-text").innerText = game.endCurrency;
   const shopOverlay = document.getElementById("shop-overlay");
   shopOverlay.classList.toggle("visible", game.state === "shop");
+  updateCurrency();
+  updateLives();
 }
 function openShop() {
   game.state = "shop";
@@ -320,16 +327,59 @@ function closeShop() {
   updateUi();
 }
 function populateShop() {
+  const container = document.getElementById("shop-container");
+  container.replaceChildren();
   for (const [key, config] of Object.entries(upgradeConfig)) {
     const card = document.createElement("div");
-
-    card.textContent = `${upgrades[key]}/${config.maxLevel} ${key} - PRICE: ${config.baseCost}`;
-
-    document.getElementById("shop-container").append(card);
     const buyButton = document.createElement("button");
+    buyButton.innerText = `${config.baseCost} 🪙`;
 
+    card.textContent = `${upgrades[key]}/${config.maxLevel} ${key}`;
+    buyButton.addEventListener("click", () => {
+      if (
+        game.bankedCurrency >= config.baseCost &&
+        upgrades[key] < config.maxLevel
+      ) {
+        game.bankedCurrency -= config.baseCost;
+        upgrades[key] += 1;
+        populateShop();
+        updateUi();
+        storeBankedCurrency();
+        storeStatsToLocal();
+      }
+    });
+    card.appendChild(buyButton);
+    container.append(card);
     console.log(key + " costs " + config.baseCost + " coins");
   }
+  container.append(exitShopButton);
+}
+function storeStatsToLocal() {
+  console.log(JSON.stringify(upgrades));
+  const upgradeString = JSON.stringify(upgrades);
+  localStorage.setItem("upgrades", upgradeString);
+}
+function storeBankedCurrency() {
+  localStorage.setItem("bankedCurrency", game.bankedCurrency);
+}
+function getStatsFromLocal() {
+  const upgradesFromString = JSON.parse(localStorage.getItem("upgrades"));
+  if (upgradesFromString !== null) {
+    for (let key in upgrades) {
+      upgrades[key] = upgradesFromString[key];
+    }
+  }
+}
+const resetAllUpgradesButton = document.getElementById("reset-progress-button");
+resetAllUpgradesButton.addEventListener("click", resetAllUpgrades);
+function resetAllUpgrades() {
+  for (let key in upgrades) {
+    upgrades[key] = 0;
+  }
+  game.bankedCurrency = 0;
+  storeBankedCurrency();
+  storeStatsToLocal();
+  updateUi();
 }
 function buyUpgrade(key) {}
 // !COINS!!!!!!!!!!!!!!!
@@ -376,23 +426,29 @@ function updateCoins(dt) {
     if (checkPlayerObjectCollision(player, coins[i])) {
       game.currency += coins[i].value;
       coins.splice(i, 1);
-      console.log(game.currency);
+      updateCurrency();
     }
   }
 }
+
 // !TIMER!!!!!!!!!!!!!
 let timer = document.getElementById("survival-time");
 function showTime() {
   const minutes = Math.floor(game.survivalTime / 60);
   const seconds = Math.floor(game.survivalTime % 60);
   timer.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
+function updateLives() {
   document.getElementById("life-container").innerText =
     "❤️".repeat(game.lives) + "🖤".repeat(calculateStat("lives") - game.lives);
+}
 
+function updateCurrency() {
   document.getElementById("currency").innerText =
     `${game.currency}🪙 (${game.bankedCurrency}💰)`;
 }
+
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawBall(ball) {
   ctx.beginPath();
@@ -775,78 +831,81 @@ function handleHorizontalCollision(ball, x0, dt) {
 }
 
 // DIAGNOSTICS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const playerXInfo = document.getElementById("player-x");
-const playerVxInfo = document.getElementById("player-vx");
-const playerAcceleration = document.getElementById("player-acceleration");
+// const playerXInfo = document.getElementById("player-x");
+// const playerVxInfo = document.getElementById("player-vx");
+// const playerAcceleration = document.getElementById("player-acceleration");
 
-function updatePlayerInfo(player) {
-  playerXInfo.innerText = player.x.toFixed(2);
-  playerVxInfo.innerText = player.vx.toFixed(2);
-  playerAcceleration.innerText = player.acceleration;
-}
+// function updatePlayerInfo(player) {
+//   playerXInfo.innerText = player.x.toFixed(2);
+//   playerVxInfo.innerText = player.vx.toFixed(2);
+//   playerAcceleration.innerText = player.acceleration;
+// }
 
-const accelerationSlider = document.getElementById("acceleration-slider");
-const accelerationDisplay = document.getElementById("acceleration-value");
-const decelerationSlider = document.getElementById("deceleration-slider");
-const decelerationDisplay = document.getElementById("deceleration-value");
+// const accelerationSlider = document.getElementById("acceleration-slider");
+// const accelerationDisplay = document.getElementById("acceleration-value");
+// const decelerationSlider = document.getElementById("deceleration-slider");
+// const decelerationDisplay = document.getElementById("deceleration-value");
 
-accelerationSlider.addEventListener("change", () => {
-  player.acceleration = accelerationSlider.value;
-  accelerationDisplay.innerText = player.acceleration;
-});
+// accelerationSlider.addEventListener("change", () => {
+//   player.acceleration = accelerationSlider.value;
+//   accelerationDisplay.innerText = player.acceleration;
+// });
 
-decelerationSlider.addEventListener("change", () => {
-  player.deceleration = decelerationSlider.value;
-  decelerationDisplay.innerText = player.deceleration;
-});
+// decelerationSlider.addEventListener("change", () => {
+//   player.deceleration = decelerationSlider.value;
+//   decelerationDisplay.innerText = player.deceleration;
+// });
 
 // !!!!!!!!!! GRAPH !!!!!!!!!!!!!!!!!!!!!!!!!!
 
-let sampleTimer = 0;
-const sampleInterval = 0.0333;
-const velocityHistory = [];
-const historyDuration = 10;
-const maxSamples = Math.round(historyDuration / sampleInterval);
-function recordPlayerVelocity(player, dt) {
-  sampleTimer += dt;
+// let sampleTimer = 0;
+// const sampleInterval = 0.0333;
+// const velocityHistory = [];
+// const historyDuration = 10;
+// const maxSamples = Math.round(historyDuration / sampleInterval);
+// function recordPlayerVelocity(player, dt) {
+//   sampleTimer += dt;
 
-  if (sampleTimer >= sampleInterval) {
-    velocityHistory.push(player.vx);
-    sampleTimer -= sampleInterval;
-    if (velocityHistory.length > maxSamples) {
-      velocityHistory.shift();
-    }
-  }
-}
+//   if (sampleTimer >= sampleInterval) {
+//     velocityHistory.push(player.vx);
+//     sampleTimer -= sampleInterval;
+//     if (velocityHistory.length > maxSamples) {
+//       velocityHistory.shift();
+//     }
+//   }
+// }
 
-const graphCanvas = document.getElementById("velocity-graph");
-const graphCtx = graphCanvas.getContext("2d");
-function drawVelocityGraph() {
-  graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-  const graphingRatio = -(graphCanvas.height / (player.maxSpeed * 2));
+// const graphCanvas = document.getElementById("velocity-graph");
+// const graphCtx = graphCanvas.getContext("2d");
+// function drawVelocityGraph() {
+//   graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+//   const graphingRatio = -(graphCanvas.height / (player.maxSpeed * 2));
 
-  graphCtx.beginPath();
-  graphCtx.moveTo(0, graphCanvas.height / 2);
-  graphCtx.lineTo(graphCanvas.width, graphCanvas.height / 2);
-  graphCtx.stroke();
-  let graphX = graphCanvas.width;
-  const graphGap = graphCanvas.width / maxSamples;
-  graphCtx.beginPath();
-  for (let index = velocityHistory.length - 1; index >= 0; index--) {
-    const graphY =
-      graphingRatio * velocityHistory[index] + graphCanvas.height / 2;
-    if (index === velocityHistory.length - 1) {
-      graphCtx.moveTo(graphX, graphY);
-    } else {
-      graphCtx.lineTo(graphX, graphY);
-    }
+//   graphCtx.beginPath();
+//   graphCtx.moveTo(0, graphCanvas.height / 2);
+//   graphCtx.lineTo(graphCanvas.width, graphCanvas.height / 2);
+//   graphCtx.stroke();
+//   let graphX = graphCanvas.width;
+//   const graphGap = graphCanvas.width / maxSamples;
+//   graphCtx.beginPath();
+//   for (let index = velocityHistory.length - 1; index >= 0; index--) {
+//     const graphY =
+//       graphingRatio * velocityHistory[index] + graphCanvas.height / 2;
+//     if (index === velocityHistory.length - 1) {
+//       graphCtx.moveTo(graphX, graphY);
+//     } else {
+//       graphCtx.lineTo(graphX, graphY);
+//     }
 
-    //DRAW
-    graphX -= graphGap;
-  }
-  graphCtx.stroke();
-}
+//     //DRAW
+//     graphX -= graphGap;
+//   }
+//   graphCtx.stroke();
+// }
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+getStatsFromLocal();
 applyUpgrades();
+updateLives();
+updateCurrency();
 initializeBalls();
 requestAnimationFrame(gameLoop);

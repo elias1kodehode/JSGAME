@@ -4,7 +4,13 @@
   gap: 0.5rem;
 }
 body {
-  display: flex;
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+canvas {
+  border: 1px black solid;
 }
 #velocity-graph {
   flex-grow: 0;
@@ -71,6 +77,13 @@ canvas {
 #game-over-bottom {
   display: flex;
   gap: 100px;
+}
+
+#reset-progress-button {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .play-area {
   position: relative;
