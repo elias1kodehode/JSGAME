@@ -751,14 +751,18 @@ document.addEventListener("keydown", (event) => {
         }
       }
     }
+    // if (event.key === "Enter") {
+    //   balls.push({
+    //     x: Math.floor(Math.random() * 100) + 100,
+    //     y: Math.floor(Math.random() * 100) + 100,
+    //     radius: 40,
+    //     vx: Math.floor(Math.random() * 100) + 100,
+    //     vy: 0,
+    //   });
+    // }
+  } else if (game.state === "gameOver") {
     if (event.key === "Enter") {
-      balls.push({
-        x: Math.floor(Math.random() * 100) + 100,
-        y: Math.floor(Math.random() * 100) + 100,
-        radius: 40,
-        vx: Math.floor(Math.random() * 100) + 100,
-        vy: 0,
-      });
+      restartGame();
     }
   }
 });
