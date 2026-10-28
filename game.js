@@ -1,11 +1,141 @@
-const canvas = document.querySelector("canvas");
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const balls = [];
+const arena = {
+  width: 800,
+  height: 600,
+};
+const room = {
+  depth: 120,
+};
+const margin = 120;
+const scene = {
+  width: arena.width + margin * 2,
+  height: arena.height + margin * 2,
+};
+const gameLayer = document.querySelector(".game-layer");
+
+gameLayer.style.width = `${arena.width}px`;
+gameLayer.style.height = `${arena.height}px`;
+const backgroundCanvas = document.getElementById("room-background");
+const foregroundCanvas = document.getElementById("room-foreground");
+backgroundCanvas.width = foregroundCanvas.width = scene.width;
+backgroundCanvas.height = foregroundCanvas.height = scene.height;
+const playArea = document.querySelector(".play-area");
+playArea.style.width = `${scene.width}px`;
+playArea.style.height = `${scene.height}px`;
+const fgCtx = foregroundCanvas.getContext("2d");
+const roomColors = {
+  foreground: {
+    floor: "#71849D",
+    ceiling: "#36465C",
+    leftWall: "#5C718A",
+    rightWall: "#40546D",
+  },
+  background: {
+    floor: "#95A7BA",
+    ceiling: "#63778F",
+    leftWall: "#8298B0",
+    rightWall: "#677E99",
+    backWall: "#B7C7D7",
+  },
+};
+function drawForeground() {
+  fgCtx.beginPath();
+  fgCtx.moveTo(margin, margin + arena.height);
+  fgCtx.lineTo(margin + arena.width, margin + arena.height);
+  fgCtx.lineTo(scene.width, scene.height);
+  fgCtx.lineTo(0, scene.height);
+  fgCtx.closePath();
+  fgCtx.fillStyle = roomColors.foreground.floor;
+  fgCtx.fill();
+
+  fgCtx.beginPath();
+  fgCtx.moveTo(0, 0);
+  fgCtx.lineTo(margin, margin);
+  fgCtx.lineTo(margin, margin + arena.height);
+  fgCtx.lineTo(0, scene.height);
+  fgCtx.closePath();
+  fgCtx.fillStyle = roomColors.foreground.leftWall;
+  fgCtx.fill();
+
+  fgCtx.beginPath();
+  fgCtx.moveTo(0, 0);
+  fgCtx.lineTo(margin, margin);
+  fgCtx.lineTo(margin + arena.width, margin);
+  fgCtx.lineTo(scene.width, 0);
+  fgCtx.closePath();
+  fgCtx.fillStyle = roomColors.foreground.ceiling;
+  fgCtx.fill();
+
+  fgCtx.beginPath();
+  fgCtx.moveTo(scene.width, 0);
+  fgCtx.lineTo(arena.width + margin, margin);
+  fgCtx.lineTo(arena.width + margin, arena.height + margin);
+  fgCtx.lineTo(scene.width, scene.height);
+  fgCtx.closePath();
+  fgCtx.fillStyle = roomColors.foreground.rightWall;
+  fgCtx.fill();
+}
+drawForeground();
+const bgCtx = backgroundCanvas.getContext("2d");
+function drawBackground() {
+  bgCtx.beginPath();
+  bgCtx.moveTo(margin, margin);
+  bgCtx.lineTo(margin + room.depth, margin + room.depth);
+  bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
+  bgCtx.lineTo(margin + arena.width, margin);
+  bgCtx.closePath();
+  bgCtx.fillStyle = roomColors.background.ceiling;
+  bgCtx.fill();
+
+  bgCtx.beginPath();
+  bgCtx.moveTo(margin, margin);
+  bgCtx.lineTo(margin + room.depth, margin + room.depth);
+  bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
+  bgCtx.lineTo(margin, margin + arena.height);
+  bgCtx.closePath();
+  bgCtx.fillStyle = roomColors.background.leftWall;
+  bgCtx.fill();
+
+  bgCtx.beginPath();
+  bgCtx.moveTo(margin, margin + arena.height);
+  bgCtx.lineTo(margin + arena.width, margin + arena.height);
+  bgCtx.lineTo(
+    margin + arena.width - room.depth,
+    margin + arena.height - room.depth,
+  );
+  bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
+  bgCtx.closePath();
+  bgCtx.fillStyle = roomColors.background.floor;
+  bgCtx.fill();
+
+  bgCtx.beginPath();
+  bgCtx.moveTo(margin + arena.width, margin);
+  bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
+  bgCtx.lineTo(
+    margin + arena.width - room.depth,
+    margin + arena.height - room.depth,
+  );
+  bgCtx.lineTo(margin + arena.width, margin + arena.height);
+  bgCtx.closePath();
+  bgCtx.fillStyle = roomColors.background.rightWall;
+  bgCtx.fill();
+
+  bgCtx.fillStyle = "#B7C7D7";
+  bgCtx.fillRect(
+    margin + room.depth,
+    margin + room.depth,
+    arena.width - 2 * room.depth,
+    arena.height - 2 * room.depth,
+  );
+}
+drawBackground();
 const player = {
   height: 50,
   width: 30,
   x: 0,
-  y: canvas.height - 50,
+  y: arena.height - 50,
   vx: 0, // px/s
   acceleration: 500, // px/s^2
   deceleration: 700, // px/s^2
@@ -224,7 +354,7 @@ function updateSpawning() {
   if (game.survivalTime >= game.nextSpawnTime) {
     for (let i = 0; i < game.ballsPerSpawn; i++) {
       const randomVx = Math.random() < 0.5 ? -200 : 200;
-      const randomX = Math.floor(Math.random() * (canvas.width - 40 - 40) + 40);
+      const randomX = Math.floor(Math.random() * (arena.width - 40 - 40) + 40);
       balls.push({
         x: randomX,
         y: 40,
@@ -430,13 +560,13 @@ function drawCoins() {
 function updateCoin(coin, dt) {
   coin.vy += gravity * dt;
   coin.y += coin.vy * dt;
-  if (coin.y + coin.radius >= canvas.height) {
+  if (coin.y + coin.radius >= arena.height) {
     if (Math.abs(coin.vy) <= 30) {
       coin.vy = 0;
-      coin.y = canvas.height - coin.radius;
+      coin.y = arena.height - coin.radius;
     } else {
       coin.vy = -(coin.vy * coin.restitution);
-      coin.y = canvas.height - coin.radius;
+      coin.y = arena.height - coin.radius;
     }
   }
 }
@@ -476,8 +606,8 @@ function updateCurrency() {
 //   40: createBallSprite(80),
 // };
 const light = {
-  x: canvas.width * 0.25,
-  y: canvas.height * 0.15,
+  x: arena.width / 2,
+  y: -margin / 2,
   z: 150,
 };
 function drawBall(ball) {
@@ -587,14 +717,14 @@ function correctBallBoundaries(ball) {
       ball.vx = -ball.vx;
     }
   }
-  if (ball.x + ball.radius > canvas.width) {
-    ball.x = canvas.width - ball.radius;
+  if (ball.x + ball.radius > arena.width) {
+    ball.x = arena.width - ball.radius;
     if (ball.vx > 0) {
       ball.vx = -ball.vx;
     }
   }
-  if (ball.y + ball.radius > canvas.height) {
-    ball.y = canvas.height - ball.radius;
+  if (ball.y + ball.radius > arena.height) {
+    ball.y = arena.height - ball.radius;
     if (ball.vy > 0) {
       ball.vy = -ball.vy;
     }
@@ -689,8 +819,8 @@ function updatePlayer(player, dt) {
   player.x += player.vx * dt;
 
   // COLLISION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (player.x + player.width >= canvas.width && player.vx > 0) {
-    player.x = canvas.width - player.width;
+  if (player.x + player.width >= arena.width && player.vx > 0) {
+    player.x = arena.width - player.width;
     player.vx = -player.vx * player.restitution;
   }
   if (player.x <= 0 && player.vx < 0) {
@@ -729,7 +859,7 @@ function shootHarpoon(player) {
   };
 }
 function checkHarpoonBallCollision(harpoon, ball) {
-  const closestY = Math.min(Math.max(ball.y, harpoon.tip), canvas.height);
+  const closestY = Math.min(Math.max(ball.y, harpoon.tip), arena.height);
   const closestX = harpoon.shootX;
   return (
     Math.sqrt((closestX - ball.x) ** 2 + (closestY - ball.y) ** 2) <=
@@ -738,7 +868,7 @@ function checkHarpoonBallCollision(harpoon, ball) {
 }
 function drawHarpoon(harpoon) {
   ctx.beginPath();
-  ctx.moveTo(harpoon.shootX, canvas.height);
+  ctx.moveTo(harpoon.shootX, arena.height);
   ctx.lineTo(harpoon.shootX, harpoon.tip);
   ctx.stroke();
 }
@@ -815,7 +945,7 @@ document.addEventListener("keyup", (event) => {
 });
 // KEY HANDLING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-let highestPoint = canvas.height;
+let highestPoint = arena.height;
 function updateBall(ball, dt) {
   const y0 = ball.y;
   const vy0 = ball.vy;
@@ -830,11 +960,11 @@ function updateBall(ball, dt) {
   if (ball.y < highestPoint) {
     highestPoint = ball.y;
   }
-  if (ball.y + ball.radius >= canvas.height) {
+  if (ball.y + ball.radius >= arena.height) {
     // console.log("Impact velocity before:", ball.vy);
     // console.log("Floor penetration:", ball.y + ball.radius - canvas.height);
     const D =
-      vy0 ** 2 - 4 * (0.5 * gravity) * (y0 - canvas.height + ball.radius);
+      vy0 ** 2 - 4 * (0.5 * gravity) * (y0 - arena.height + ball.radius);
     const t1 = (-vy0 + Math.sqrt(D)) / gravity;
     const t2 = (-vy0 - Math.sqrt(D)) / gravity;
     let collisionTime;
@@ -848,7 +978,7 @@ function updateBall(ball, dt) {
       const remainingTime = dt - collisionTime;
       const impactVelocity = vy0 + gravity * collisionTime;
       const reboundVelocity = -impactVelocity;
-      const impactY = canvas.height - ball.radius;
+      const impactY = arena.height - ball.radius;
       ball.y =
         impactY +
         reboundVelocity * remainingTime +
@@ -857,7 +987,7 @@ function updateBall(ball, dt) {
       // console.log("HIT: Impact velocity:", impactVelocity);
       // console.log("HIT: Rebound velocity" + reboundVelocity);
       // console.log("HIT: Highest point during bounce: " + highestPoint);
-      highestPoint = canvas.height;
+      highestPoint = arena.height;
       const t = -reboundVelocity / gravity;
       const highestPointTheoretical =
         impactY + reboundVelocity * t + 0.5 * (gravity * t ** 2);

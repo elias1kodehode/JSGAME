@@ -1,57 +1,63 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ULTRAMEGAPANG</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ULTRAMEGAPANG</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-
-<body>
-  <div class="game-container">
-    <div class="top-hud">
-      <div id="life-container"></div>
-      <div id="survival-time"></div>
-      <div id="currency"></div>
-    </div>
-    <div class="play-area">
-      <canvas id="game" width="800" height="600"></canvas>
-      <div id="shop-overlay">
-        <h1>SHOP</h1>
-        <div id="shop-container">
-          <button id="shop-back-button">Exit shop</button>
-        </div>
+  <body>
+    <div class="game-container">
+      <div class="top-hud">
+        <div id="life-container"></div>
+        <div id="survival-time"></div>
+        <div id="currency"></div>
       </div>
-      <div id="game-over-overlay">
-        <div id="game-over-top">
-          <h1>GAME OVER</h1>
-        </div>
-        <div id="game-over-middle">
-          <div class="text-container">
-            <h2>Survival time:</h2>
-            <p id="survival-time-text">0</p>
+      <div class="play-area">
+        <canvas id="room-background"></canvas>
+        <div class="game-layer">
+          <canvas id="game" width="800" height="600"></canvas>
+          <div id="shop-overlay">
+            <h1>SHOP</h1>
+            <div id="shop-container">
+              <button id="shop-back-button">Exit shop</button>
+            </div>
           </div>
-          <div class="text-container">
-            <h2>Coins acquired:</h2>
-            <p id="coins-acquired-text">0</p>
+          <div id="game-over-overlay">
+            <div id="game-over-top">
+              <h1>GAME OVER</h1>
+            </div>
+            <div id="game-over-middle">
+              <div class="text-container">
+                <h2>Survival time:</h2>
+                <p id="survival-time-text">0</p>
+              </div>
+              <div class="text-container">
+                <h2>Coins acquired:</h2>
+                <p id="coins-acquired-text">0</p>
+              </div>
+            </div>
+            <div id="game-over-bottom">
+              <button id="restart-button">Restart</button
+              ><button id="shop-button">Shop</button>
+            </div>
+            <div id="reset-progress">
+              <button id="reset-progress-button">
+                RESET ALL SHOP UPGRADES
+              </button>
+            </div>
           </div>
         </div>
-        <div id="game-over-bottom">
-          <button id="restart-button">Restart</button><button id="shop-button">Shop</button>
-        </div>
-        <div id="reset-progress">
-          <button id="reset-progress-button">RESET ALL SHOP UPGRADES</button>
-        </div>
+        <canvas id="room-foreground"></canvas>
+      </div>
+      <div id="controls">
+        <p>Move: ← Arrow keys →</p>
+        <p>Shoot: Space ␣</p>
+        <p>Restart: Enter ↵</p>
       </div>
     </div>
-    <div id="controls">
-      <p>Move: ← Arrow keys →</p>
-      <p>Shoot: Space ␣</p>
-      <p>Restart: Enter ↵</p>
-    </div>
-  </div>
-  <!-- 
+    <!-- 
   <div id="debug-panel">
     <canvas id="velocity-graph" width="500" height="200"></canvas>
     <div>
@@ -74,7 +80,6 @@
       <p>Acceleration: <span id="player-acceleration">500</span></p>
     </div>
   </div> -->
-</body>
-<script src="game.js"></script>
-
+  </body>
+  <script src="game.js"></script>
 </html>

@@ -9,9 +9,7 @@ body {
   display: grid;
   place-items: center;
 }
-canvas {
-  border: 1px black solid;
-}
+
 #controls {
   display: flex;
   justify-content: space-around;
@@ -103,4 +101,30 @@ canvas {
 }
 #shop-overlay {
   visibility: hidden;
+}
+
+#room-foreground {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.game-layer {
+  position: relative;
+  z-index: 2;
+  top: 120px;
+  left: 120px;
+}
+#room-background {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.play-area {
+  position: relative;
+}
+#room-background,
+#room-foreground {
+  width: 100%;
+  height: 100%;
 }
