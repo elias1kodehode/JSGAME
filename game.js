@@ -205,7 +205,11 @@ function updateHarpoons(dt) {
       });
       if (hitBall) {
         balls.splice(balls.indexOf(hitBall), 1);
-        harpoons.splice(i, 1);
+        if (harpoons[i].pierce === 0) {
+          harpoons.splice(i, 1);
+        } else {
+          harpoons[i].pierce--;
+        }
         if (hitBall.radius > 10) {
           balls.push(...splitBall(hitBall));
         } else {
@@ -466,10 +470,36 @@ function updateCurrency() {
 }
 
 // BALL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// const ballSprite = {
+//   10: createBallSprite(20),
+//   20: createBallSprite(40),
+//   40: createBallSprite(80),
+// };
+const light = {
+  x: canvas.width * 0.25,
+  y: canvas.height * 0.15,
+  z: 150,
+};
 function drawBall(ball) {
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
-  ctx.stroke();
+  // ctx.beginPath();
+  // ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
+  // ctx.stroke();
+  const dx = light.x - ball.x;
+  const dy = light.y - ball.y;
+  const L = Math.hypot(dx, dy, light.z);
+  const lx = dx / L;
+  const ly = dy / L;
+  const lz = light.z / L;
+  const intensity = Math.max(0, 1 - L / 1000);
+
+  const ballSprite = createBallSprite(ball.radius * 2, lx, ly, lz, intensity);
+  ctx.drawImage(
+    ballSprite,
+    ball.x - ball.radius,
+    ball.y - ball.radius,
+    ball.radius * 2,
+    ball.radius * 2,
+  );
 }
 function splitBall(parent) {
   const leftChild = {
@@ -678,6 +708,7 @@ function shootHarpoon(player) {
   let speed = 0;
   let acceleration = harpoonStats.harpoonAcceleration;
   let duration = harpoonStats.harpoonDuration;
+  let pierce = harpoonStats.harpoonPierce;
   let timer = 0;
   if (player.facing === "right") {
     shootX = player.x + player.width;
@@ -693,6 +724,7 @@ function shootHarpoon(player) {
     speed,
     acceleration,
     duration,
+    pierce,
     timer,
   };
 }
@@ -940,3 +972,43 @@ updateLives();
 updateCurrency();
 initializeBalls();
 requestAnimationFrame(gameLoop);
+
+// !GRAPHICS!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+function createBallSprite(size, lx, ly, lz, intensity) {
+  const spriteCanvas = document.createElement("canvas");
+  spriteCanvas.height = size;
+  spriteCanvas.width = size;
+  const spriteCtx = spriteCanvas.getContext("2d");
+
+  const center = (size - 1) / 2;
+  const radius = size / 2;
+
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      const dx = i - center;
+      const dy = j - center;
+
+      if (dx ** 2 + dy ** 2 <= radius ** 2) {
+        const z = Math.sqrt(radius ** 2 - dx ** 2 - dy ** 2);
+
+        //NormalVector
+        const nx = dx / radius;
+        const ny = dy / radius;
+        const nz = z / radius;
+
+        // const lx = -0.58;
+        // const ly = -0.58;
+        // const lz = 0.58;
+
+        const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
+        const brightness = diffuse * intensity;
+        const lightness = 15 + 50 * brightness;
+
+        spriteCtx.fillStyle = `hsl(215, 85%, ${lightness}%)`;
+        spriteCtx.fillRect(i, j, 1, 1);
+      }
+    }
+  }
+  return spriteCanvas;
+}
