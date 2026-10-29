@@ -1,19 +1,21 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ULTRAMEGAPANG</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
 
-  <body>
-    <div class="game-container">
-      <div class="top-hud">
-        <div id="life-container"></div>
-        <div id="survival-time"></div>
-        <div id="currency"></div>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULTRAMEGAPANG</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="game-container">
+    <div class="top-hud">
+      <div id="life-container"></div>
+      <div id="survival-time"></div>
+      <div id="currency"></div>
+    </div>
+    <div class="scene-wrapper">
       <div class="play-area">
         <canvas id="room-background"></canvas>
         <div class="game-layer">
@@ -39,8 +41,7 @@
               </div>
             </div>
             <div id="game-over-bottom">
-              <button id="restart-button">Restart</button
-              ><button id="shop-button">Shop</button>
+              <button id="restart-button">Restart</button><button id="shop-button">Shop</button>
             </div>
             <div id="reset-progress">
               <button id="reset-progress-button">
@@ -51,13 +52,14 @@
         </div>
         <canvas id="room-foreground"></canvas>
       </div>
-      <div id="controls">
-        <p>Move: ← Arrow keys →</p>
-        <p>Shoot: Space ␣</p>
-        <p>Restart: Enter ↵</p>
-      </div>
     </div>
-    <!-- 
+    <div id="controls">
+      <p>Move: ← Arrow keys →</p>
+      <p>Shoot: Space ␣</p>
+      <p>Restart: Enter ↵</p>
+    </div>
+  </div>
+  <!-- 
   <div id="debug-panel">
     <canvas id="velocity-graph" width="500" height="200"></canvas>
     <div>
@@ -80,6 +82,7 @@
       <p>Acceleration: <span id="player-acceleration">500</span></p>
     </div>
   </div> -->
-  </body>
-  <script src="game.js"></script>
+</body>
+<script src="game.js"></script>
+
 </html>

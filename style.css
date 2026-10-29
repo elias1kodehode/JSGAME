@@ -87,9 +87,6 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
 }
-.play-area {
-  position: relative;
-}
 #game-over-overlay.visible {
   visibility: visible;
 }
@@ -122,6 +119,7 @@ canvas {
 }
 .play-area {
   position: relative;
+  transform-origin: top left;
 }
 #room-background,
 #room-foreground {

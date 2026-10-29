@@ -13,17 +13,44 @@ const scene = {
   width: arena.width + margin * 2,
   height: arena.height + margin * 2,
 };
+const sceneWrapper = document.querySelector(".scene-wrapper");
+const playArea = document.querySelector(".play-area");
+const backgroundCanvas = document.getElementById("room-background");
+const foregroundCanvas = document.getElementById("room-foreground");
 const gameLayer = document.querySelector(".game-layer");
+const topHud = document.querySelector(".top-hud");
+const controls = document.getElementById("controls");
+window.addEventListener("resize", resizeScene);
+
+function resizeScene() {
+  const availableHeight =
+    window.innerHeight - (topHud.offsetHeight + controls.offsetHeight + 32);
+
+  const scale = Math.min(
+    1,
+    window.innerWidth / scene.width,
+    availableHeight / scene.height,
+  );
+  const wrapperWidth = scene.width * scale;
+  const wrapperHeight = scene.height * scale;
+  sceneWrapper.style.width = `${wrapperWidth}px`;
+  sceneWrapper.style.height = `${wrapperHeight}px`;
+  playArea.style.transform = `scale(${scale})`;
+  console.log({
+    scale,
+    wrapperWidth,
+    wrapperHeight,
+  });
+}
+resizeScene();
 
 gameLayer.style.width = `${arena.width}px`;
 gameLayer.style.height = `${arena.height}px`;
-const backgroundCanvas = document.getElementById("room-background");
-const foregroundCanvas = document.getElementById("room-foreground");
 backgroundCanvas.width = foregroundCanvas.width = scene.width;
 backgroundCanvas.height = foregroundCanvas.height = scene.height;
-const playArea = document.querySelector(".play-area");
 playArea.style.width = `${scene.width}px`;
 playArea.style.height = `${scene.height}px`;
+
 const fgCtx = foregroundCanvas.getContext("2d");
 const roomColors = {
   foreground: {
@@ -614,6 +641,7 @@ function drawBall(ball) {
   // ctx.beginPath();
   // ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
   // ctx.stroke();
+
   const dx = light.x - ball.x;
   const dy = light.y - ball.y;
   const L = Math.hypot(dx, dy, light.z);
@@ -913,15 +941,15 @@ document.addEventListener("keydown", (event) => {
         }
       }
     }
-    // if (event.key === "Enter") {
-    //   balls.push({
-    //     x: Math.floor(Math.random() * 100) + 100,
-    //     y: Math.floor(Math.random() * 100) + 100,
-    //     radius: 40,
-    //     vx: Math.floor(Math.random() * 100) + 100,
-    //     vy: 0,
-    //   });
-    // }
+    if (event.key === "Enter") {
+      balls.push({
+        x: Math.floor(Math.random() * 100) + 100,
+        y: Math.floor(Math.random() * 100) + 100,
+        radius: 40,
+        vx: Math.floor(Math.random() * 100) + 100,
+        vy: 0,
+      });
+    }
   } else if (game.state === "gameOver") {
     if (event.key === "Enter") {
       restartGame();
@@ -1110,7 +1138,7 @@ function createBallSprite(size, lx, ly, lz, intensity) {
   spriteCanvas.height = size;
   spriteCanvas.width = size;
   const spriteCtx = spriteCanvas.getContext("2d");
-
+  const imageData = spriteCtx.createImageData(size, size);
   const center = (size - 1) / 2;
   const radius = size / 2;
 
@@ -1127,18 +1155,28 @@ function createBallSprite(size, lx, ly, lz, intensity) {
         const ny = dy / radius;
         const nz = z / radius;
 
-        // const lx = -0.58;
-        // const ly = -0.58;
-        // const lz = 0.58;
+        const lx = -0.58;
+        const ly = -0.58;
+        const lz = 0.58;
 
         const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
         const brightness = diffuse * intensity;
-        const lightness = 15 + 50 * brightness;
+        //   const lightness = 15 + 50 * brightness;
+        //   spriteCtx.fillStyle = `hsl(215, 85%, ${lightness}%)`;
+        //   spriteCtx.fillRect(i, j, 1, 1);
 
-        spriteCtx.fillStyle = `hsl(215, 85%, ${lightness}%)`;
-        spriteCtx.fillRect(i, j, 1, 1);
+        const red = 12 + (65 - 12) * brightness;
+        const green = 30 + (150 - 30) * brightness;
+        const blue = 65 + (255 - 65) * brightness;
+
+        const index = (j * size + i) * 4;
+        imageData.data[index] = red;
+        imageData.data[index + 1] = green;
+        imageData.data[index + 2] = blue;
+        imageData.data[index + 3] = 255;
       }
     }
   }
+  spriteCtx.putImageData(imageData, 0, 0);
   return spriteCanvas;
 }
