@@ -650,9 +650,12 @@ function drawBall(ball) {
   const lz = light.z / L;
   const intensity = Math.max(0, 1 - L / 1000);
 
-  const ballSprite = createBallSprite(ball.radius * 2, lx, ly, lz, intensity);
+  const ballSprite = ballSprites[ball.radius];
+
+  updateBallSprite(ballSprite, lx, ly, lz, intensity);
+
   ctx.drawImage(
-    ballSprite,
+    ballSprite.canvas,
     ball.x - ball.radius,
     ball.y - ball.radius,
     ball.radius * 2,
@@ -922,13 +925,13 @@ function updateHarpoon(harpoon, dt) {
 document.addEventListener("keydown", (event) => {
   event.preventDefault();
   if (game.state === "playing") {
-    if (event.key === "ArrowRight") {
+    if (event.key === "ArrowRight" || event.key === "d") {
       movingRight = true;
       if (!event.repeat) {
         player.facing = "right";
       }
     }
-    if (event.key === "ArrowLeft") {
+    if (event.key === "ArrowLeft" || event.key === "a") {
       movingLeft = true;
       if (!event.repeat) {
         player.facing = "left";
@@ -958,13 +961,13 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keyup", (event) => {
   event.preventDefault();
-  if (event.key === "ArrowRight") {
+  if (event.key === "ArrowRight" || event.key === "d") {
     movingRight = false;
     if (movingLeft) {
       player.facing = "left";
     }
   }
-  if (event.key === "ArrowLeft") {
+  if (event.key === "ArrowLeft" || event.key === "a") {
     movingLeft = false;
     if (movingRight) {
       player.facing = "right";
@@ -1133,12 +1136,14 @@ requestAnimationFrame(gameLoop);
 
 // !GRAPHICS!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function createBallSprite(size, lx, ly, lz, intensity) {
+function createBallSprite(size) {
   const spriteCanvas = document.createElement("canvas");
   spriteCanvas.height = size;
   spriteCanvas.width = size;
   const spriteCtx = spriteCanvas.getContext("2d");
   const imageData = spriteCtx.createImageData(size, size);
+  const normals = [];
+
   const center = (size - 1) / 2;
   const radius = size / 2;
 
@@ -1154,29 +1159,44 @@ function createBallSprite(size, lx, ly, lz, intensity) {
         const nx = dx / radius;
         const ny = dy / radius;
         const nz = z / radius;
+        const index = (j * size + i) * 4;
 
-        const lx = -0.58;
-        const ly = -0.58;
-        const lz = 0.58;
-
-        const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
-        const brightness = diffuse * intensity;
+        normals.push({ index, nx, ny, nz });
         //   const lightness = 15 + 50 * brightness;
         //   spriteCtx.fillStyle = `hsl(215, 85%, ${lightness}%)`;
         //   spriteCtx.fillRect(i, j, 1, 1);
-
-        const red = 12 + (65 - 12) * brightness;
-        const green = 30 + (150 - 30) * brightness;
-        const blue = 65 + (255 - 65) * brightness;
-
-        const index = (j * size + i) * 4;
-        imageData.data[index] = red;
-        imageData.data[index + 1] = green;
-        imageData.data[index + 2] = blue;
-        imageData.data[index + 3] = 255;
       }
     }
   }
-  spriteCtx.putImageData(imageData, 0, 0);
-  return spriteCanvas;
+  return {
+    canvas: spriteCanvas,
+    ctx: spriteCtx,
+    imageData: imageData,
+    size: size,
+    normals: normals,
+  };
 }
+
+function updateBallSprite(sprite, lx, ly, lz, intensity) {
+  const { data } = sprite.imageData;
+  for (const normal of sprite.normals) {
+    const { nx, ny, nz, index } = normal;
+    const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
+    const brightness = diffuse * intensity;
+    const red = 12 + (65 - 12) * brightness;
+    const green = 30 + (150 - 30) * brightness;
+    const blue = 65 + (255 - 65) * brightness;
+
+    data[index] = red;
+    data[index + 1] = green;
+    data[index + 2] = blue;
+    data[index + 3] = 255;
+  }
+  sprite.ctx.putImageData(sprite.imageData, 0, 0);
+}
+
+const ballSprites = {
+  10: createBallSprite(20),
+  20: createBallSprite(40),
+  40: createBallSprite(80),
+};
