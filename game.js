@@ -7,6 +7,7 @@ const arena = {
 };
 const room = {
   depth: 120,
+  worldDepth: 240,
 };
 const margin = 120;
 const scene = {
@@ -67,64 +68,129 @@ const roomColors = {
     backWall: "#B7C7D7",
   },
 };
+
+const baseRoomColor = { r: 0.72, g: 0.71, b: 0.68 };
+
+const roomMaterials = {
+  floor: {
+    color: { ...baseRoomColor },
+    texture: null,
+  },
+  wall: {
+    color: { ...baseRoomColor },
+    texture: null,
+  },
+  ceiling: {
+    color: { ...baseRoomColor },
+    texture: null,
+  },
+};
+function materialToCss(material) {
+  const { r, g, b } = material.color;
+
+  return `rgb(${r * 255}, ${g * 255}, ${b * 255})`;
+}
+const roomSurfaces = {
+  floor: {
+    material: roomMaterials.floor,
+    normal: { x: 0, y: -1, z: 0 },
+    y: arena.height,
+  },
+  ceiling: {
+    material: roomMaterials.ceiling,
+    normal: { x: 0, y: 1, z: 0 },
+    y: 0,
+  },
+  rightWall: {
+    material: roomMaterials.wall,
+    normal: { x: -1, y: 0, z: 0 },
+    x: arena.width,
+  },
+  leftWall: {
+    material: roomMaterials.wall,
+    normal: { x: 1, y: 0, z: 0 },
+    x: 0,
+  },
+  backWall: {
+    material: roomMaterials.wall,
+    normal: { x: 0, y: 0, z: 1 },
+    z: -room.worldDepth,
+  },
+};
+const point = {
+  x: arena.width / 2,
+  y: arena.height,
+  z: 0,
+};
 function drawForeground() {
+  // ===== FLOOR (FRONT) =====
   fgCtx.beginPath();
   fgCtx.moveTo(margin, margin + arena.height);
   fgCtx.lineTo(margin + arena.width, margin + arena.height);
   fgCtx.lineTo(scene.width, scene.height);
   fgCtx.lineTo(0, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = roomColors.foreground.floor;
+  fgCtx.fillStyle = materialToCss(roomMaterials.floor);
   fgCtx.fill();
 
+  // ===== LEFT WALL (FRONT) =====
   fgCtx.beginPath();
   fgCtx.moveTo(0, 0);
   fgCtx.lineTo(margin, margin);
   fgCtx.lineTo(margin, margin + arena.height);
   fgCtx.lineTo(0, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = roomColors.foreground.leftWall;
+  fgCtx.fillStyle = materialToCss(roomMaterials.wall);
   fgCtx.fill();
 
+  // ===== CEILING (FRONT) =====
   fgCtx.beginPath();
   fgCtx.moveTo(0, 0);
   fgCtx.lineTo(margin, margin);
   fgCtx.lineTo(margin + arena.width, margin);
   fgCtx.lineTo(scene.width, 0);
   fgCtx.closePath();
-  fgCtx.fillStyle = roomColors.foreground.ceiling;
+  fgCtx.fillStyle = materialToCss(roomMaterials.ceiling);
   fgCtx.fill();
 
+  // ===== RIGHT WALL (FRONT) =====
   fgCtx.beginPath();
   fgCtx.moveTo(scene.width, 0);
   fgCtx.lineTo(arena.width + margin, margin);
   fgCtx.lineTo(arena.width + margin, arena.height + margin);
   fgCtx.lineTo(scene.width, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = roomColors.foreground.rightWall;
+  fgCtx.fillStyle = materialToCss(roomMaterials.wall);
   fgCtx.fill();
 }
+
 drawForeground();
 const bgCtx = backgroundCanvas.getContext("2d");
+
 function drawBackground() {
+  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  bgCtx.fillRect(0, 0, scene.width, scene.height);
+  // ===== CEILING (BACK) =====
   bgCtx.beginPath();
   bgCtx.moveTo(margin, margin);
   bgCtx.lineTo(margin + room.depth, margin + room.depth);
   bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
   bgCtx.lineTo(margin + arena.width, margin);
   bgCtx.closePath();
-  bgCtx.fillStyle = roomColors.background.ceiling;
+  bgCtx.fillStyle = materialToCss(roomMaterials.ceiling);
   bgCtx.fill();
 
+  // ===== LEFT WALL (BACK) =====
   bgCtx.beginPath();
   bgCtx.moveTo(margin, margin);
   bgCtx.lineTo(margin + room.depth, margin + room.depth);
   bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
   bgCtx.lineTo(margin, margin + arena.height);
   bgCtx.closePath();
-  bgCtx.fillStyle = roomColors.background.leftWall;
+  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
   bgCtx.fill();
 
+  // ===== FLOOR (BACK) =====
   bgCtx.beginPath();
   bgCtx.moveTo(margin, margin + arena.height);
   bgCtx.lineTo(margin + arena.width, margin + arena.height);
@@ -134,9 +200,10 @@ function drawBackground() {
   );
   bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
   bgCtx.closePath();
-  bgCtx.fillStyle = roomColors.background.floor;
+  bgCtx.fillStyle = materialToCss(roomMaterials.floor);
   bgCtx.fill();
 
+  // ===== RIGHT WALL (BACK) =====
   bgCtx.beginPath();
   bgCtx.moveTo(margin + arena.width, margin);
   bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
@@ -146,10 +213,11 @@ function drawBackground() {
   );
   bgCtx.lineTo(margin + arena.width, margin + arena.height);
   bgCtx.closePath();
-  bgCtx.fillStyle = roomColors.background.rightWall;
+  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
   bgCtx.fill();
 
-  bgCtx.fillStyle = "#B7C7D7";
+  // ===== BACK WALL (CENTER RECTANGLE) =====
+  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
   bgCtx.fillRect(
     margin + room.depth,
     margin + room.depth,
@@ -382,13 +450,16 @@ function updateSpawning() {
     for (let i = 0; i < game.ballsPerSpawn; i++) {
       const randomVx = Math.random() < 0.5 ? -200 : 200;
       const randomX = Math.floor(Math.random() * (arena.width - 40 - 40) + 40);
-      balls.push({
-        x: randomX,
-        y: 40,
-        radius: 40,
-        vx: randomVx,
-        vy: 0,
-      });
+      balls.push(
+        createBall({
+          x: randomX,
+          y: 40,
+          radius: 40,
+          vx: randomVx,
+          vy: 0,
+          z: 0,
+        }),
+      );
     }
     game.nextSpawnTime += game.spawnInterval;
   }
@@ -458,13 +529,16 @@ function restartGame() {
 
 function initializeBalls() {
   balls.length = 0;
-  balls.push({
-    x: 200,
-    y: 100,
-    radius: 40,
-    vx: 200,
-    vy: 0,
-  });
+  balls.push(
+    createBall({
+      x: 200,
+      y: 100,
+      radius: 40,
+      vx: 200,
+      vy: 0,
+      z: 0,
+    }),
+  );
 }
 // !UI!!!!!!!!!!!!!
 const restartButton = document.getElementById("restart-button");
@@ -561,18 +635,58 @@ function resetAllUpgrades() {
 function buyUpgrade(key) {}
 // !COINS!!!!!!!!!!!!!!!
 function spawnCoin(x, y) {
-  coins.push({
-    x: x,
-    y: y,
-    radius: 8,
-    vx: 0,
-    vy: 0,
-    restitution: 0.3,
-    value: 1,
-  });
+  coins.push(createCoin({ x, y }));
+}
+function createBall({ x, y, radius, vx = 0, vy = 0, z = 0 }) {
+  return { x, y, radius, vx, vy, z };
+}
+function createCoin({
+  x,
+  y,
+  z = 0,
+  radius = 8,
+  vx = 0,
+  vy = 0,
+  restitution = 0.5,
+  value = 1,
+  light = {},
+}) {
+  const coinLight = {
+    zOffset: 150,
+    range: 450,
+    strength: 0.8,
+    color: { r: 1, g: 0.75, b: 0.2 },
+    ...light,
+  };
+  return {
+    x,
+    y,
+    z,
+    radius,
+    vx,
+    vy,
+    restitution,
+    value,
+    light: coinLight,
+  };
 }
 function drawCoin(coin) {
+  console.log(coin);
   ctx.save();
+  ctx.beginPath();
+  const haloGradient = ctx.createRadialGradient(
+    coin.x,
+    coin.y,
+    0,
+    coin.x,
+    coin.y,
+    coin.radius + 10,
+  );
+  haloGradient.addColorStop(0, "rgba(255, 255, 0, 0.6)");
+  haloGradient.addColorStop(1, "rgba(255, 255, 0, 0)");
+  ctx.arc(coin.x, coin.y, coin.radius + 10, 0, 2 * Math.PI);
+  ctx.fillStyle = haloGradient;
+  ctx.fill();
   ctx.beginPath();
   ctx.arc(coin.x, coin.y, coin.radius, 0, 2 * Math.PI);
   ctx.fillStyle = "yellow";
@@ -632,27 +746,102 @@ function updateCurrency() {
 //   20: createBallSprite(40),
 //   40: createBallSprite(80),
 // };
-const light = {
-  x: arena.width / 2,
-  y: -margin / 2,
+const lights = [
+  {
+    x: arena.width / 2,
+    y: -margin / 2,
+    z: 150,
+    range: 1000,
+    strength: 1,
+    color: { r: 0.3, g: 0.6, b: 1 },
+  },
+];
+const coinLightSettings = {
   z: 150,
+  range: 300,
+  strength: 0.7,
+  color: { r: 1, g: 0.75, b: 0.2 },
 };
+
+function calculateLighting(point, light) {
+  const dx = light.x - point.x;
+  const dy = light.y - point.y;
+  const dz = light.z - point.z;
+  const L = Math.hypot(dx, dy, dz);
+  if (L === 0) {
+    return;
+  }
+  if (light.range > L) {
+    const lx = dx / L;
+    const ly = dy / L;
+    const lz = dz / L;
+    const intensity = light.strength * Math.max(0, 1 - L / light.range);
+    const color = light.color;
+    return {
+      lx,
+      ly,
+      lz,
+      intensity,
+      color,
+    };
+  }
+  return;
+}
+
+// function ballLightDistance(ball, source, light) {
+//   const dx = source.x - ball.x;
+//   const dy = source.y - ball.y;
+//   const L = Math.hypot(dx, dy, light.z);
+//   if (light.range > L) {
+//     const lx = dx / L;
+//     const ly = dy / L;
+//     const lz = light.z / L;
+//     const intensity = light.strength * Math.max(0, 1 - L / light.range);
+//     const color = light.color;
+//     return {
+//       lx,
+//       ly,
+//       lz,
+//       intensity,
+//       color,
+//     };
+//   }
+//   return;
+// }
+function getCoinLight(coin) {
+  return {
+    x: coin.x,
+    y: coin.y,
+    z: coin.z + coin.light.zOffset,
+    range: coin.light.range,
+    strength: coin.light.strength,
+    color: coin.light.color,
+  };
+}
 function drawBall(ball) {
+  const activeLights = [];
   // ctx.beginPath();
   // ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
   // ctx.stroke();
 
-  const dx = light.x - ball.x;
-  const dy = light.y - ball.y;
-  const L = Math.hypot(dx, dy, light.z);
-  const lx = dx / L;
-  const ly = dy / L;
-  const lz = light.z / L;
-  const intensity = Math.max(0, 1 - L / 1000);
+  for (const light of lights) {
+    const ballLight = calculateLighting(ball, light);
+    if (ballLight !== undefined) {
+      activeLights.push(ballLight);
+    }
+  }
 
   const ballSprite = ballSprites[ball.radius];
 
-  updateBallSprite(ballSprite, lx, ly, lz, intensity);
+  for (const coin of coins) {
+    const coinLight = getCoinLight(coin);
+    const ballLight = calculateLighting(ball, coinLight);
+    if (ballLight) {
+      activeLights.push(ballLight);
+    }
+  }
+
+  updateBallSprite(ballSprite, activeLights);
 
   ctx.drawImage(
     ballSprite.canvas,
@@ -663,20 +852,22 @@ function drawBall(ball) {
   );
 }
 function splitBall(parent) {
-  const leftChild = {
+  const leftChild = createBall({
     x: parent.x - parent.radius / 2,
     y: parent.y,
+    radius: parent.radius / 2,
     vx: parent.vx / 2,
     vy: parent.vy / 2,
-    radius: parent.radius / 2,
-  };
-  const rightChild = {
+  });
+
+  const rightChild = createBall({
     x: parent.x + parent.radius / 2,
     y: parent.y,
+    radius: parent.radius / 2,
     vx: parent.vx / 2,
     vy: parent.vy / 2,
-    radius: parent.radius / 2,
-  };
+  });
+
   const splitImpulse = 150;
   leftChild.vx -= splitImpulse;
   rightChild.vx += splitImpulse;
@@ -691,10 +882,15 @@ function checkBallBallCollision(ballA, ballB) {
   const distance = Math.sqrt(
     (ballB.x - ballA.x) ** 2 + (ballB.y - ballA.y) ** 2,
   );
-
-  const normalVectorX = (ballB.x - ballA.x) / distance;
-  const normalVectorY = (ballB.y - ballA.y) / distance;
-
+  let normalVectorX;
+  let normalVectorY;
+  if (distance === 0) {
+    normalVectorX = 1;
+    normalVectorY = 0;
+  } else {
+    normalVectorX = (ballB.x - ballA.x) / distance;
+    normalVectorY = (ballB.y - ballA.y) / distance;
+  }
   const relativeVx = ballB.vx - ballA.vx;
   const relativeVy = ballB.vy - ballA.vy;
 
@@ -877,7 +1073,8 @@ function shootHarpoon(player) {
   if (player.facing === "left") {
     shootX = player.x;
   }
-
+  // Keeping harpoon away from the wall to reduce collision tunneling.
+  shootX = Math.max(12, Math.min(shootX, arena.width - 12));
   return {
     shootX,
     shootY,
@@ -945,13 +1142,16 @@ document.addEventListener("keydown", (event) => {
       }
     }
     if (event.key === "Enter") {
-      balls.push({
-        x: Math.floor(Math.random() * 100) + 100,
-        y: Math.floor(Math.random() * 100) + 100,
-        radius: 40,
-        vx: Math.floor(Math.random() * 100) + 100,
-        vy: 0,
-      });
+      balls.push(
+        createBall({
+          x: Math.floor(Math.random() * 100) + 100,
+          y: Math.floor(Math.random() * 100) + 100,
+          radius: 40,
+          vx: Math.floor(Math.random() * 100) + 100,
+          vy: 0,
+          z: 0,
+        }),
+      );
     }
   } else if (game.state === "gameOver") {
     if (event.key === "Enter") {
@@ -1177,15 +1377,28 @@ function createBallSprite(size) {
   };
 }
 
-function updateBallSprite(sprite, lx, ly, lz, intensity) {
+function updateBallSprite(sprite, activeLights) {
   const { data } = sprite.imageData;
   for (const normal of sprite.normals) {
     const { nx, ny, nz, index } = normal;
-    const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
-    const brightness = diffuse * intensity;
-    const red = 12 + (65 - 12) * brightness;
-    const green = 30 + (150 - 30) * brightness;
-    const blue = 65 + (255 - 65) * brightness;
+    let lightR = 0;
+    let lightG = 0;
+    let lightB = 0;
+    for (const light of activeLights) {
+      const { lx, ly, lz, intensity, color } = light;
+      const diffuse = Math.max(0, nx * lx + ny * ly + nz * lz);
+
+      const contribution = diffuse * intensity;
+      lightR += contribution * color.r;
+      lightG += contribution * color.g;
+      lightB += contribution * color.b;
+    }
+    lightR = Math.min(1, lightR);
+    lightG = Math.min(1, lightG);
+    lightB = Math.min(1, lightB);
+    const red = 12 + (65 - 12) * lightR;
+    const green = 30 + (150 - 30) * lightG;
+    const blue = 65 + (255 - 65) * lightB;
 
     data[index] = red;
     data[index + 1] = green;
