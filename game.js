@@ -22,7 +22,22 @@ const gameLayer = document.querySelector(".game-layer");
 const topHud = document.querySelector(".top-hud");
 const controls = document.getElementById("controls");
 window.addEventListener("resize", resizeScene);
-
+const lights = [
+  {
+    x: arena.width / 2,
+    y: 120,
+    z: 150,
+    range: 1000,
+    strength: 1,
+    color: { r: 0.3, g: 0.6, b: 1 },
+  },
+];
+const coinLightSettings = {
+  z: 150,
+  range: 300,
+  strength: 0.7,
+  color: { r: 1, g: 0.75, b: 0.2 },
+};
 function resizeScene() {
   const availableHeight =
     window.innerHeight - (topHud.offsetHeight + controls.offsetHeight + 32);
@@ -90,6 +105,10 @@ function materialToCss(material) {
 
   return `rgb(${r * 255}, ${g * 255}, ${b * 255})`;
 }
+function rgbToCss(color) {
+  const { r, g, b } = color;
+  return `rgb(${r * 255}, ${g * 255}, ${b * 255})`;
+}
 const roomSurfaces = {
   floor: {
     material: roomMaterials.floor,
@@ -117,10 +136,37 @@ const roomSurfaces = {
     z: -room.worldDepth,
   },
 };
-const point = {
+const frontFloorPoint = {
   x: arena.width / 2,
   y: arena.height,
   z: 0,
+};
+
+const backFloorPoint = {
+  x: arena.width / 2,
+  y: arena.height,
+  z: -room.worldDepth,
+};
+
+const backWallPoint = {
+  x: arena.width / 2,
+  y: arena.height / 2,
+  z: -room.worldDepth,
+};
+const centerBackLeftWall = {
+  x: 0,
+  y: arena.height / 2,
+  z: -room.worldDepth / 2,
+};
+const centerBackRightWall = {
+  x: arena.width,
+  y: arena.height / 2,
+  z: -room.worldDepth / 2,
+};
+const ceilingPoint = {
+  x: arena.width / 2,
+  y: 0,
+  z: -room.worldDepth / 2,
 };
 function drawForeground() {
   // ===== FLOOR (FRONT) =====
@@ -130,7 +176,13 @@ function drawForeground() {
   fgCtx.lineTo(scene.width, scene.height);
   fgCtx.lineTo(0, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = materialToCss(roomMaterials.floor);
+  fgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.floor, frontFloorPoint),
+  );
+  console.log(
+    "Floor (front)",
+    calculateRoomColor(roomSurfaces.floor, frontFloorPoint),
+  );
   fgCtx.fill();
 
   // ===== LEFT WALL (FRONT) =====
@@ -140,7 +192,9 @@ function drawForeground() {
   fgCtx.lineTo(margin, margin + arena.height);
   fgCtx.lineTo(0, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  fgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
+  );
   fgCtx.fill();
 
   // ===== CEILING (FRONT) =====
@@ -150,7 +204,9 @@ function drawForeground() {
   fgCtx.lineTo(margin + arena.width, margin);
   fgCtx.lineTo(scene.width, 0);
   fgCtx.closePath();
-  fgCtx.fillStyle = materialToCss(roomMaterials.ceiling);
+  fgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
+  );
   fgCtx.fill();
 
   // ===== RIGHT WALL (FRONT) =====
@@ -160,7 +216,9 @@ function drawForeground() {
   fgCtx.lineTo(arena.width + margin, arena.height + margin);
   fgCtx.lineTo(scene.width, scene.height);
   fgCtx.closePath();
-  fgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  fgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
+  );
   fgCtx.fill();
 }
 
@@ -177,7 +235,13 @@ function drawBackground() {
   bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
   bgCtx.lineTo(margin + arena.width, margin);
   bgCtx.closePath();
-  bgCtx.fillStyle = materialToCss(roomMaterials.ceiling);
+  bgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
+  );
+  console.log(
+    "Back ceiling",
+    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
+  );
   bgCtx.fill();
 
   // ===== LEFT WALL (BACK) =====
@@ -187,7 +251,13 @@ function drawBackground() {
   bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
   bgCtx.lineTo(margin, margin + arena.height);
   bgCtx.closePath();
-  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  bgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
+  );
+  console.log(
+    "Left BACK wall",
+    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
+  );
   bgCtx.fill();
 
   // ===== FLOOR (BACK) =====
@@ -200,7 +270,13 @@ function drawBackground() {
   );
   bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
   bgCtx.closePath();
-  bgCtx.fillStyle = materialToCss(roomMaterials.floor);
+  bgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.floor, backFloorPoint),
+  );
+  console.log(
+    "Floor(BACK)",
+    calculateRoomColor(roomSurfaces.floor, backFloorPoint),
+  );
   bgCtx.fill();
 
   // ===== RIGHT WALL (BACK) =====
@@ -213,11 +289,19 @@ function drawBackground() {
   );
   bgCtx.lineTo(margin + arena.width, margin + arena.height);
   bgCtx.closePath();
-  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  bgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
+  );
   bgCtx.fill();
 
   // ===== BACK WALL (CENTER RECTANGLE) =====
-  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
+  bgCtx.fillStyle = rgbToCss(
+    calculateRoomColor(roomSurfaces.backWall, backWallPoint),
+  );
+  console.log(
+    "Backwall: ",
+    calculateRoomColor(roomSurfaces.backWall, backWallPoint),
+  );
   bgCtx.fillRect(
     margin + room.depth,
     margin + room.depth,
@@ -746,22 +830,6 @@ function updateCurrency() {
 //   20: createBallSprite(40),
 //   40: createBallSprite(80),
 // };
-const lights = [
-  {
-    x: arena.width / 2,
-    y: -margin / 2,
-    z: 150,
-    range: 1000,
-    strength: 1,
-    color: { r: 0.3, g: 0.6, b: 1 },
-  },
-];
-const coinLightSettings = {
-  z: 150,
-  range: 300,
-  strength: 0.7,
-  color: { r: 1, g: 0.75, b: 0.2 },
-};
 
 function calculateLighting(point, light) {
   const dx = light.x - point.x;
@@ -1413,3 +1481,69 @@ const ballSprites = {
   20: createBallSprite(40),
   40: createBallSprite(80),
 };
+function calculateDiffuse(normal, lighting) {
+  const diffuse = Math.max(
+    0,
+    normal.x * lighting.lx + normal.y * lighting.ly + normal.z * lighting.lz,
+  );
+  return diffuse;
+}
+function calculateSurfaceLighting(surface, point, light) {
+  const lightNormals = calculateLighting(point, light);
+
+  if (!lightNormals) {
+    return { r: 0, g: 0, b: 0 };
+  }
+
+  const diffuse = calculateDiffuse(surface.normal, lightNormals);
+  const contribution = diffuse * lightNormals.intensity;
+  let { r, g, b } = light.color;
+  r = r * contribution;
+  g = g * contribution;
+  b = b * contribution;
+  return { r, g, b };
+}
+function applyLighting(material, lighting) {
+  const { r: mr, g: mg, b: mb } = material.color;
+  const { r: lr, g: lg, b: lb } = lighting;
+  return { r: mr * lr, g: mg * lg, b: mb * lb };
+}
+function combineLighting(ambient, direct) {
+  return {
+    r: ambient.r + direct.r,
+    g: ambient.g + direct.g,
+    b: ambient.b + direct.b,
+  };
+}
+
+function calculateRoomColor(surface, point) {
+  const ambient = { r: 0.15, g: 0.15, b: 0.15 };
+
+  const surfaceLighting = calculateSurfaceLighting(surface, point, lights[0]);
+  const combinedLighting = combineLighting(ambient, surfaceLighting);
+  const surfaceColor = applyLighting(surface.material, combinedLighting);
+  return surfaceColor;
+}
+
+//LINEAR INTERPOLATION
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+function lerpColor(colorA, colorB, t) {
+  return {
+    r: lerp(colorA.r, colorB.r, t),
+    g: lerp(colorA.g, colorB.g, t),
+    b: lerp(colorA.b, colorB.b, t),
+  };
+}
+function inverseLerp(a, b, value) {
+  return (value - a) / (b - a);
+}
+
+function getFloorColorAtDepth(z) {
+  const t = inverseLerp(-room.worldDepth, 0, z);
+  const backColor = calculateRoomColor(roomSurfaces.floor, backFloorPoint);
+  const frontColor = calculateRoomColor(roomSurfaces.floor, frontFloorPoint);
+  const zColor = lerpColor(backColor, frontColor, t);
+  return zColor;
+}
