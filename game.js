@@ -1,3 +1,5 @@
+import { lerp, inverseLerp, lerpColor } from "./math.js";
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const balls = [];
@@ -14,10 +16,12 @@ const scene = {
   width: arena.width + margin * 2,
   height: arena.height + margin * 2,
 };
+canvas.width = scene.width;
+canvas.height = scene.height;
 const sceneWrapper = document.querySelector(".scene-wrapper");
 const playArea = document.querySelector(".play-area");
-const backgroundCanvas = document.getElementById("room-background");
-const foregroundCanvas = document.getElementById("room-foreground");
+// const backgroundCanvas = document.getElementById("room-background");
+// const foregroundCanvas = document.getElementById("room-foreground");
 const gameLayer = document.querySelector(".game-layer");
 const topHud = document.querySelector(".top-hud");
 const controls = document.getElementById("controls");
@@ -49,9 +53,9 @@ function resizeScene() {
   );
   const wrapperWidth = scene.width * scale;
   const wrapperHeight = scene.height * scale;
-  // sceneWrapper.style.width = `${wrapperWidth}px`;
-  // sceneWrapper.style.height = `${wrapperHeight}px`;
-  //playArea.style.transform = `scale(${scale})`;
+  sceneWrapper.style.width = `${wrapperWidth}px`;
+  sceneWrapper.style.height = `${wrapperHeight}px`;
+  playArea.style.transform = `scale(${scale})`;
   console.log({
     scale,
     wrapperWidth,
@@ -60,14 +64,14 @@ function resizeScene() {
 }
 resizeScene();
 
-gameLayer.style.width = `${arena.width}px`;
-gameLayer.style.height = `${arena.height}px`;
-backgroundCanvas.width = foregroundCanvas.width = scene.width;
-backgroundCanvas.height = foregroundCanvas.height = scene.height;
+gameLayer.style.width = `${scene.width}px`;
+gameLayer.style.height = `${scene.height}px`;
+// backgroundCanvas.width = foregroundCanvas.width = scene.width;
+// backgroundCanvas.height = foregroundCanvas.height = scene.height;
 playArea.style.width = `${scene.width}px`;
 playArea.style.height = `${scene.height}px`;
 
-const fgCtx = foregroundCanvas.getContext("2d");
+// const ctx = foregroundCanvas.getContext("2d");
 const roomColors = {
   foreground: {
     floor: "#71849D",
@@ -176,7 +180,7 @@ function drawForeground() {
   // ===== FLOOR (FRONT) =====
 
   //gradient
-  const gradient = fgCtx.createLinearGradient(
+  const gradient = ctx.createLinearGradient(
     arena.width / 2,
     margin + arena.height,
     arena.width / 2,
@@ -200,110 +204,103 @@ function drawForeground() {
       rgbToCss(calculateRoomColor(roomSurfaces.floor, point)),
     );
   }
-  fgCtx.beginPath();
-  fgCtx.moveTo(margin, margin + arena.height - 1);
-  fgCtx.lineTo(margin + arena.width, margin + arena.height - 1);
-  fgCtx.lineTo(scene.width, scene.height);
-  fgCtx.lineTo(0, scene.height);
-  fgCtx.closePath();
-  fgCtx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(margin, margin + arena.height);
+  ctx.lineTo(margin + arena.width, margin + arena.height);
+  ctx.lineTo(scene.width, scene.height);
+  ctx.lineTo(0, scene.height);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
   console.log(
     "Floor (front)",
     calculateRoomColor(roomSurfaces.floor, frontFloorPoint),
   );
-  fgCtx.fill();
+  ctx.fill();
 
   // ===== LEFT WALL (FRONT) =====
-  fgCtx.beginPath();
-  fgCtx.moveTo(0, 0);
-  fgCtx.lineTo(margin, margin);
-  fgCtx.lineTo(margin, margin + arena.height);
-  fgCtx.lineTo(0, scene.height);
-  fgCtx.closePath();
-  fgCtx.fillStyle = rgbToCss(
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(margin, margin);
+  ctx.lineTo(margin, margin + arena.height);
+  ctx.lineTo(0, scene.height);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
   );
-  fgCtx.fill();
+  ctx.fill();
 
   // ===== CEILING (FRONT) =====
-  fgCtx.beginPath();
-  fgCtx.moveTo(0, 0);
-  fgCtx.lineTo(margin, margin);
-  fgCtx.lineTo(margin + arena.width, margin);
-  fgCtx.lineTo(scene.width, 0);
-  fgCtx.closePath();
-  fgCtx.fillStyle = rgbToCss(
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(margin, margin);
+  ctx.lineTo(margin + arena.width, margin);
+  ctx.lineTo(scene.width, 0);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
   );
-  fgCtx.fill();
+  ctx.fill();
 
   // ===== RIGHT WALL (FRONT) =====
-  fgCtx.beginPath();
-  fgCtx.moveTo(scene.width, 0);
-  fgCtx.lineTo(arena.width + margin, margin);
-  fgCtx.lineTo(arena.width + margin, arena.height + margin);
-  fgCtx.lineTo(scene.width, scene.height);
-  fgCtx.closePath();
-  fgCtx.fillStyle = rgbToCss(
+  ctx.beginPath();
+  ctx.moveTo(scene.width, 0);
+  ctx.lineTo(arena.width + margin, margin);
+  ctx.lineTo(arena.width + margin, arena.height + margin);
+  ctx.lineTo(scene.width, scene.height);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
   );
-  fgCtx.fill();
+  ctx.fill();
 }
 
-drawForeground();
-const bgCtx = backgroundCanvas.getContext("2d");
+// drawForeground();
+// const ctx = backgroundCanvas.getContext("2d");
 
 function drawBackground() {
-  bgCtx.fillStyle = materialToCss(roomMaterials.wall);
-  bgCtx.fillRect(0, 0, scene.width, scene.height);
+  ctx.fillStyle = materialToCss(roomMaterials.wall);
+  ctx.fillRect(0, 0, scene.width, scene.height);
   // ===== CEILING (BACK) =====
-  bgCtx.beginPath();
-  bgCtx.moveTo(margin, margin);
-  bgCtx.lineTo(margin + room.depth, margin + room.depth);
-  bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
-  bgCtx.lineTo(margin + arena.width, margin);
-  bgCtx.closePath();
-  bgCtx.fillStyle = rgbToCss(
+  ctx.beginPath();
+  ctx.moveTo(margin, margin);
+  ctx.lineTo(margin + room.depth, margin + room.depth);
+  ctx.lineTo(margin + arena.width - room.depth, margin + room.depth);
+  ctx.lineTo(margin + arena.width, margin);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
   );
   console.log(
     "Back ceiling",
     calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
   );
-  bgCtx.fill();
+  ctx.fill();
 
   // ===== LEFT WALL (BACK) =====
-  bgCtx.beginPath();
-  bgCtx.moveTo(margin, margin);
-  bgCtx.lineTo(margin + room.depth, margin + room.depth);
-  bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
-  bgCtx.lineTo(margin, margin + arena.height);
-  bgCtx.closePath();
-  bgCtx.fillStyle = rgbToCss(
+  ctx.beginPath();
+  ctx.moveTo(margin, margin);
+  ctx.lineTo(margin + room.depth, margin + room.depth);
+  ctx.lineTo(margin + room.depth, margin + arena.height - room.depth);
+  ctx.lineTo(margin, margin + arena.height);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
   );
   console.log(
     "Left BACK wall",
     calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
   );
-  bgCtx.fill();
+  ctx.fill();
 
   // ===== FLOOR (BACK) =====
 
   //Gradient
-  const gradient = bgCtx.createLinearGradient(
+  const gradient = ctx.createLinearGradient(
     0,
     margin + arena.height - room.depth,
     0,
     margin + arena.height,
   );
-
-  gradient.addColorStop(0, rgbToCss(getFloorColorAtDepth(-room.worldDepth)));
-  gradient.addColorStop(
-    0.5,
-    rgbToCss(getFloorColorAtDepth(-room.worldDepth / 2)),
-  );
-  gradient.addColorStop(1, rgbToCss(getFloorColorAtDepth(0)));
 
   const sampleCount = 5;
 
@@ -318,53 +315,53 @@ function drawBackground() {
   }
 
   //
-  bgCtx.beginPath();
-  bgCtx.moveTo(margin, margin + arena.height);
-  bgCtx.lineTo(margin + arena.width, margin + arena.height);
-  bgCtx.lineTo(
+  ctx.beginPath();
+  ctx.moveTo(margin, margin + arena.height);
+  ctx.lineTo(margin + arena.width, margin + arena.height);
+  ctx.lineTo(
     margin + arena.width - room.depth,
     margin + arena.height - room.depth,
   );
-  bgCtx.lineTo(margin + room.depth, margin + arena.height - room.depth);
-  bgCtx.closePath();
-  bgCtx.fillStyle = gradient;
+  ctx.lineTo(margin + room.depth, margin + arena.height - room.depth);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
   console.log(
     "Floor(BACK)",
     calculateRoomColor(roomSurfaces.floor, backFloorPoint),
   );
-  bgCtx.fill();
+  ctx.fill();
 
   // ===== RIGHT WALL (BACK) =====
-  bgCtx.beginPath();
-  bgCtx.moveTo(margin + arena.width, margin);
-  bgCtx.lineTo(margin + arena.width - room.depth, margin + room.depth);
-  bgCtx.lineTo(
+  ctx.beginPath();
+  ctx.moveTo(margin + arena.width, margin);
+  ctx.lineTo(margin + arena.width - room.depth, margin + room.depth);
+  ctx.lineTo(
     margin + arena.width - room.depth,
     margin + arena.height - room.depth,
   );
-  bgCtx.lineTo(margin + arena.width, margin + arena.height);
-  bgCtx.closePath();
-  bgCtx.fillStyle = rgbToCss(
+  ctx.lineTo(margin + arena.width, margin + arena.height);
+  ctx.closePath();
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
   );
-  bgCtx.fill();
+  ctx.fill();
 
   // ===== BACK WALL (CENTER RECTANGLE) =====
-  bgCtx.fillStyle = rgbToCss(
+  ctx.fillStyle = rgbToCss(
     calculateRoomColor(roomSurfaces.backWall, backWallPoint),
   );
   console.log(
     "Backwall: ",
     calculateRoomColor(roomSurfaces.backWall, backWallPoint),
   );
-  bgCtx.fillRect(
+  ctx.fillRect(
     margin + room.depth,
     margin + room.depth,
     arena.width - 2 * room.depth,
     arena.height - 2 * room.depth,
   );
 }
-drawBackground();
+// drawBackground();
 const player = {
   height: 50,
   width: 30,
@@ -519,7 +516,7 @@ function gameLoop(timestamp) {
     // DIAG drawVelocityGraph();
     showTime();
   }
-  drawGame();
+  drawScene();
   requestAnimationFrame(gameLoop);
 }
 
@@ -605,8 +602,19 @@ function updateSpawning() {
 }
 
 // !DRAW GAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function drawScene() {
+  ctx.clearRect(0, 0, scene.width, scene.height);
+  drawBackground();
+  ctx.save();
+  ctx.translate(margin, margin);
+  ctx.beginPath();
+  ctx.rect(0, 0, arena.width, arena.height);
+  ctx.clip();
+  drawGame();
+  ctx.restore();
+  drawForeground();
+}
 function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
   balls.forEach((ball) => {
     drawBall(ball);
   });
@@ -1113,6 +1121,7 @@ function drawPlayer(player) {
     ctx.globalAlpha =
       0.65 + 0.3 * Math.sin(2 * Math.PI * 3 * player.invincibilityRemaining);
   }
+
   let eyeX;
   const eyeY = player.y + 5;
   if (player.facing === "left") {
@@ -1120,6 +1129,7 @@ function drawPlayer(player) {
   } else if (player.facing === "right") {
     eyeX = player.x + player.width - 4;
   }
+  ctx.fillStyle = "black";
   ctx.fillRect(player.x, player.y, player.width, player.height);
   ctx.beginPath();
   ctx.arc(eyeX, eyeY, 3, 0, Math.PI * 2);
@@ -1581,19 +1591,20 @@ function calculateRoomColor(surface, point) {
 }
 
 //LINEAR INTERPOLATION
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-function lerpColor(colorA, colorB, t) {
-  return {
-    r: lerp(colorA.r, colorB.r, t),
-    g: lerp(colorA.g, colorB.g, t),
-    b: lerp(colorA.b, colorB.b, t),
-  };
-}
-function inverseLerp(a, b, value) {
-  return (value - a) / (b - a);
-}
+// OUT
+// function lerp(a, b, t) {
+//   return a + (b - a) * t;
+// }
+// function lerpColor(colorA, colorB, t) {
+//   return {
+//     r: lerp(colorA.r, colorB.r, t),
+//     g: lerp(colorA.g, colorB.g, t),
+//     b: lerp(colorA.b, colorB.b, t),
+//   };
+// }
+// function inverseLerp(a, b, value) {
+//   return (value - a) / (b - a);
+// }
 
 function getFloorColorAtDepth(z) {
   const t = inverseLerp(-room.worldDepth, 0, z);
@@ -1604,7 +1615,7 @@ function getFloorColorAtDepth(z) {
 }
 
 function drawGradientOnFloor() {
-  const gradient = bgCtx.createRadialGradient(
+  const gradient = ctx.createRadialGradient(
     0,
     margin + arena.height - room.depth,
     0,

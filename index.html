@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ULTRAMEGAPANG</title>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="game.js" defer></script>
 </head>
 
 <body>
@@ -17,9 +18,8 @@
     </div>
     <div class="scene-wrapper">
       <div class="play-area">
-        <canvas id="room-background"></canvas>
         <div class="game-layer">
-          <canvas id="game" width="800" height="600"></canvas>
+          <canvas id="game"></canvas>
           <div id="shop-overlay">
             <h1>SHOP</h1>
             <div id="shop-container">
@@ -50,7 +50,8 @@
             </div>
           </div>
         </div>
-        <canvas id="room-foreground"></canvas>
+        <!-- <canvas id="room-background"></canvas> -->
+        <!-- <canvas id="room-foreground"></canvas> -->
       </div>
     </div>
     <div id="controls">
@@ -83,6 +84,6 @@
     </div>
   </div> -->
 </body>
-<script src="game.js"></script>
+
 
 </html>

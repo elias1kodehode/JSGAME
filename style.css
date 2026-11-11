@@ -100,29 +100,27 @@ canvas {
   visibility: hidden;
 }
 
-#room-foreground {
+/* #room-foreground {
   position: absolute;
   inset: 0;
   z-index: 3;
   pointer-events: none;
-}
+} */
 .game-layer {
   position: relative;
   z-index: 2;
-  top: 120px;
-  left: 120px;
 }
-#room-background {
+/* #room-background {
   position: absolute;
   inset: 0;
   z-index: 1;
-}
+} */
 .play-area {
   position: relative;
   transform-origin: top left;
 }
-#room-background,
+/* #room-background,
 #room-foreground {
   width: 100%;
   height: 100%;
-}
+} */
