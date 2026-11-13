@@ -1,27 +1,35 @@
-import { lerp, inverseLerp, lerpColor } from "./math.js";
+import {
+  lerp,
+  inverseLerp,
+  lerpColor,
+  bilinearColor,
+  bilinear3d,
+  bilinear2d,
+} from "./math.js";
+import { arena, margin, scene, lightmapResolution } from "./config.js";
+import {
+  room,
+  roomMaterials,
+  roomSurfaces,
+  ceilingPoint,
+  centerBackLeftWall,
+  centerBackRightWall,
+  backWallPoint,
+  frontFloorPoint,
+  frontOuterFloorPoint,
+  backFloorPoint,
+} from "./room.js";
+import { calculateLighting, calculateSurfaceColor } from "./lighting.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const balls = [];
-const arena = {
-  width: 800,
-  height: 600,
-};
-const room = {
-  depth: 120,
-  worldDepth: 240,
-};
-const margin = 120;
-const scene = {
-  width: arena.width + margin * 2,
-  height: arena.height + margin * 2,
-};
+
 canvas.width = scene.width;
 canvas.height = scene.height;
 const sceneWrapper = document.querySelector(".scene-wrapper");
 const playArea = document.querySelector(".play-area");
-// const backgroundCanvas = document.getElementById("room-background");
-// const foregroundCanvas = document.getElementById("room-foreground");
+
 const gameLayer = document.querySelector(".game-layer");
 const topHud = document.querySelector(".top-hud");
 const controls = document.getElementById("controls");
@@ -56,22 +64,20 @@ function resizeScene() {
   sceneWrapper.style.width = `${wrapperWidth}px`;
   sceneWrapper.style.height = `${wrapperHeight}px`;
   playArea.style.transform = `scale(${scale})`;
-  console.log({
-    scale,
-    wrapperWidth,
-    wrapperHeight,
-  });
+  // console.log({
+  //   scale,
+  //   wrapperWidth,
+  //   wrapperHeight,
+  // });
 }
 resizeScene();
 
 gameLayer.style.width = `${scene.width}px`;
 gameLayer.style.height = `${scene.height}px`;
-// backgroundCanvas.width = foregroundCanvas.width = scene.width;
-// backgroundCanvas.height = foregroundCanvas.height = scene.height;
+
 playArea.style.width = `${scene.width}px`;
 playArea.style.height = `${scene.height}px`;
 
-// const ctx = foregroundCanvas.getContext("2d");
 const roomColors = {
   foreground: {
     floor: "#71849D",
@@ -88,22 +94,6 @@ const roomColors = {
   },
 };
 
-const baseRoomColor = { r: 0.72, g: 0.71, b: 0.68 };
-
-const roomMaterials = {
-  floor: {
-    color: { ...baseRoomColor },
-    texture: null,
-  },
-  wall: {
-    color: { ...baseRoomColor },
-    texture: null,
-  },
-  ceiling: {
-    color: { ...baseRoomColor },
-    texture: null,
-  },
-};
 function materialToCss(material) {
   const { r, g, b } = material.color;
 
@@ -113,70 +103,8 @@ function rgbToCss(color) {
   const { r, g, b } = color;
   return `rgb(${r * 255}, ${g * 255}, ${b * 255})`;
 }
-const roomSurfaces = {
-  floor: {
-    material: roomMaterials.floor,
-    normal: { x: 0, y: -1, z: 0 },
-    y: arena.height,
-  },
-  ceiling: {
-    material: roomMaterials.ceiling,
-    normal: { x: 0, y: 1, z: 0 },
-    y: 0,
-  },
-  rightWall: {
-    material: roomMaterials.wall,
-    normal: { x: -1, y: 0, z: 0 },
-    x: arena.width,
-  },
-  leftWall: {
-    material: roomMaterials.wall,
-    normal: { x: 1, y: 0, z: 0 },
-    x: 0,
-  },
-  backWall: {
-    material: roomMaterials.wall,
-    normal: { x: 0, y: 0, z: 1 },
-    z: -room.worldDepth,
-  },
-};
-const frontFloorPoint = {
-  x: arena.width / 2,
-  y: arena.height,
-  z: 0,
-};
-const frontOuterFloorPoint = {
-  x: arena.width / 2,
-  y: arena.height,
-  z: 120,
-};
-const backFloorPoint = {
-  x: arena.width / 2,
-  y: arena.height,
-  z: -room.worldDepth,
-};
 
-const backWallPoint = {
-  x: arena.width / 2,
-  y: arena.height / 2,
-  z: -room.worldDepth,
-};
-const centerBackLeftWall = {
-  x: 0,
-  y: arena.height / 2,
-  z: -room.worldDepth / 2,
-};
-const centerBackRightWall = {
-  x: arena.width,
-  y: arena.height / 2,
-  z: -room.worldDepth / 2,
-};
-const ceilingPoint = {
-  x: arena.width / 2,
-  y: 0,
-  z: -room.worldDepth / 2,
-};
-function drawForeground() {
+function drawForeground(activeLights) {
   // ===== FLOOR (FRONT) =====
 
   //gradient
@@ -187,10 +115,16 @@ function drawForeground() {
     scene.height,
   );
   gradient.addColorStop(0, rgbToCss(getFloorColorAtDepth(0)));
-  //  gradient.addColorStop(0.5, rgbToCss(calculateRoomColor(roomSurfaces.floor, {})))
+
   gradient.addColorStop(
     1,
-    rgbToCss(calculateRoomColor(roomSurfaces.floor, frontOuterFloorPoint)),
+    rgbToCss(
+      calculateSurfaceColor(
+        roomSurfaces.floor,
+        frontOuterFloorPoint,
+        activeLights,
+      ),
+    ),
   );
 
   const sampleCount = 5;
@@ -201,7 +135,7 @@ function drawForeground() {
     const point = { x: arena.width / 2, y: arena.height, z };
     gradient.addColorStop(
       t,
-      rgbToCss(calculateRoomColor(roomSurfaces.floor, point)),
+      rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
     );
   }
   ctx.beginPath();
@@ -211,10 +145,10 @@ function drawForeground() {
   ctx.lineTo(0, scene.height);
   ctx.closePath();
   ctx.fillStyle = gradient;
-  console.log(
-    "Floor (front)",
-    calculateRoomColor(roomSurfaces.floor, frontFloorPoint),
-  );
+  // console.log(
+  //   "Floor (front)",
+  //   calculateSurfaceColor(roomSurfaces.floor, frontFloorPoint, lights),
+  // );
   ctx.fill();
 
   // ===== LEFT WALL (FRONT) =====
@@ -225,7 +159,11 @@ function drawForeground() {
   ctx.lineTo(0, scene.height);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
+    calculateSurfaceColor(
+      roomSurfaces.leftWall,
+      centerBackLeftWall,
+      activeLights,
+    ),
   );
   ctx.fill();
 
@@ -237,7 +175,7 @@ function drawForeground() {
   ctx.lineTo(scene.width, 0);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
+    calculateSurfaceColor(roomSurfaces.ceiling, ceilingPoint, activeLights),
   );
   ctx.fill();
 
@@ -249,15 +187,16 @@ function drawForeground() {
   ctx.lineTo(scene.width, scene.height);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
+    calculateSurfaceColor(
+      roomSurfaces.rightWall,
+      centerBackRightWall,
+      activeLights,
+    ),
   );
   ctx.fill();
 }
 
-// drawForeground();
-// const ctx = backgroundCanvas.getContext("2d");
-
-function drawBackground() {
+function drawBackground(activeLights) {
   ctx.fillStyle = materialToCss(roomMaterials.wall);
   ctx.fillRect(0, 0, scene.width, scene.height);
   // ===== CEILING (BACK) =====
@@ -268,12 +207,12 @@ function drawBackground() {
   ctx.lineTo(margin + arena.width, margin);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
+    calculateSurfaceColor(roomSurfaces.ceiling, ceilingPoint, activeLights),
   );
-  console.log(
-    "Back ceiling",
-    calculateRoomColor(roomSurfaces.ceiling, ceilingPoint),
-  );
+  // console.log(
+  //   "Back ceiling",
+  //   calculateSurfaceColor(roomSurfaces.ceiling, ceilingPoint, activeLights),
+  // );
   ctx.fill();
 
   // ===== LEFT WALL (BACK) =====
@@ -284,12 +223,16 @@ function drawBackground() {
   ctx.lineTo(margin, margin + arena.height);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
+    calculateSurfaceColor(
+      roomSurfaces.leftWall,
+      centerBackLeftWall,
+      activeLights,
+    ),
   );
-  console.log(
-    "Left BACK wall",
-    calculateRoomColor(roomSurfaces.leftWall, centerBackLeftWall),
-  );
+  // console.log(
+  //   "Left BACK wall",
+  //   calculateSurfaceColor(roomSurfaces.leftWall, centerBackLeftWall, activeLights),
+  // );
   ctx.fill();
 
   // ===== FLOOR (BACK) =====
@@ -310,25 +253,139 @@ function drawBackground() {
     const point = { x: arena.width / 2, y: arena.height, z };
     gradient.addColorStop(
       t,
-      rgbToCss(calculateRoomColor(roomSurfaces.floor, point)),
+      rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
     );
   }
 
   //
   ctx.beginPath();
-  ctx.moveTo(margin, margin + arena.height);
-  ctx.lineTo(margin + arena.width, margin + arena.height);
-  ctx.lineTo(
-    margin + arena.width - room.depth,
-    margin + arena.height - room.depth,
+  const bottomRight = { x: margin + arena.width, y: margin + arena.height };
+  const bottomLeft = { x: margin, y: margin + arena.height };
+  const topRight = {
+    x: margin + arena.width - room.depth,
+    y: margin + arena.height - room.depth,
+  };
+  const topLeft = {
+    x: margin + room.depth,
+    y: margin + arena.height - room.depth,
+  };
+  const worldTopLeft = {
+    x: 0,
+    y: arena.height,
+    z: -room.worldDepth,
+  };
+
+  const worldTopRight = {
+    x: arena.width,
+    y: arena.height,
+    z: -room.worldDepth,
+  };
+
+  const worldBottomLeft = {
+    x: 0,
+    y: arena.height,
+    z: 0,
+  };
+
+  const worldBottomRight = {
+    x: arena.width,
+    y: arena.height,
+    z: 0,
+  };
+
+  const screenGrid = createScreenGrid(
+    topLeft,
+    topRight,
+    bottomLeft,
+    bottomRight,
   );
-  ctx.lineTo(margin + room.depth, margin + arena.height - room.depth);
-  ctx.closePath();
-  ctx.fillStyle = gradient;
-  console.log(
-    "Floor(BACK)",
-    calculateRoomColor(roomSurfaces.floor, backFloorPoint),
+  const lightingGrid = createLightingMap(
+    worldTopLeft,
+    worldTopRight,
+    worldBottomLeft,
+    worldBottomRight,
+    roomSurfaces.floor,
+    activeLights,
   );
+
+  const subdivisions = 4;
+
+  for (let i = 0; i < screenGrid.length - 1; i++) {
+    for (let j = 0; j < screenGrid[0].length - 1; j++) {
+      const screenTopLeft = screenGrid[i][j];
+      const screenTopRight = screenGrid[i][j + 1];
+      const screenBottomLeft = screenGrid[i + 1][j];
+      const screenBottomRight = screenGrid[i + 1][j + 1];
+
+      const colorTopLeft = lightingGrid[i][j];
+      const colorTopRight = lightingGrid[i][j + 1];
+      const colorBottomLeft = lightingGrid[i + 1][j];
+      const colorBottomRight = lightingGrid[i + 1][j + 1];
+      ctx.beginPath();
+      ctx.moveTo(screenTopLeft.x, screenTopLeft.y);
+      ctx.lineTo(screenTopRight.x, screenTopRight.y);
+      ctx.lineTo(screenBottomRight.x, screenBottomRight.y);
+      ctx.lineTo(screenBottomLeft.x, screenBottomLeft.y);
+      ctx.closePath();
+      ctx.fillStyle = rgbToCss(colorTopLeft);
+      ctx.fill();
+      // EXPERIMENTAL: Subdivision-based lighting interpolation.
+      // Currently using a higher-resolution lighting grid instead.
+      // May be useful later if lighting calculations become expensive.
+      // for (let row = 0; row < subdivisions; row++) {
+      //   for (let col = 0; col < subdivisions; col++) {
+      //     const uStart = col / subdivisions;
+      //     const uEnd = (col + 1) / subdivisions;
+      //     const vStart = row / subdivisions;
+      //     const vEnd = (row + 1) / subdivisions;
+
+      //     const smallTopLeft = bilinear2d(
+      //       screenTopLeft,
+      //       screenTopRight,
+      //       screenBottomLeft,
+      //       screenBottomRight,
+      //       uStart,
+      //       vStart,
+      //     );
+      //     const smallTopRight = bilinear2d(
+      //       screenTopLeft,
+      //       screenTopRight,
+      //       screenBottomLeft,
+      //       screenBottomRight,
+      //       uEnd,
+      //       vStart,
+      //     );
+      //     const smallBottomLeft = bilinear2d(
+      //       screenTopLeft,
+      //       screenTopRight,
+      //       screenBottomLeft,
+      //       screenBottomRight,
+      //       uStart,
+      //       vEnd,
+      //     );
+      //     const smallBottomRight = bilinear2d(
+      //       screenTopLeft,
+      //       screenTopRight,
+      //       screenBottomLeft,
+      //       screenBottomRight,
+      //       uEnd,
+      //       vEnd,
+      //     );
+      //   }
+      // }
+    }
+  }
+
+  // ctx.moveTo(bottomLeft.x, bottomLeft.y);
+  // ctx.lineTo(topLeft.x, topLeft.y);
+  // ctx.lineTo(topRight.x, topRight.y);
+  // ctx.lineTo(bottomRight.x, bottomRight.y);
+  // ctx.closePath();
+  // ctx.fillStyle = gradient;
+  // console.log(
+  //   "Floor(BACK)",
+  //   calculateSurfaceColor(roomSurfaces.floor, backFloorPoint, activeLights),
+  // );
   ctx.fill();
 
   // ===== RIGHT WALL (BACK) =====
@@ -342,18 +399,22 @@ function drawBackground() {
   ctx.lineTo(margin + arena.width, margin + arena.height);
   ctx.closePath();
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.rightWall, centerBackRightWall),
+    calculateSurfaceColor(
+      roomSurfaces.rightWall,
+      centerBackRightWall,
+      activeLights,
+    ),
   );
   ctx.fill();
 
   // ===== BACK WALL (CENTER RECTANGLE) =====
   ctx.fillStyle = rgbToCss(
-    calculateRoomColor(roomSurfaces.backWall, backWallPoint),
+    calculateSurfaceColor(roomSurfaces.backWall, backWallPoint, activeLights),
   );
-  console.log(
-    "Backwall: ",
-    calculateRoomColor(roomSurfaces.backWall, backWallPoint),
-  );
+  // console.log(
+  //   "Backwall: ",
+  //   calculateSurfaceColor(roomSurfaces.backWall, backWallPoint, activeLights),
+  // );
   ctx.fillRect(
     margin + room.depth,
     margin + room.depth,
@@ -361,7 +422,7 @@ function drawBackground() {
     arena.height - 2 * room.depth,
   );
 }
-// drawBackground();
+
 const player = {
   height: 50,
   width: 30,
@@ -487,13 +548,6 @@ function applyUpgrades() {
   harpoonStats.harpoonAcceleration = calculateStat("harpoonAcceleration");
   harpoonStats.harpoonDuration = calculateStat("harpoonDuration");
   harpoonStats.harpoonPierce = calculateStat("harpoonPierce");
-
-  // for (let key in upgrades) {
-  //   if (upgradeConfig[key] !== undefined) {
-  //     player[key] =
-  //       baseStats[key] + upgrades[key] * upgradeConfig[key].bonusPerLevel;
-  //   }
-  // }
 }
 function calculateStat(key) {
   return baseStats[key] + upgrades[key] * upgradeConfig[key].bonusPerLevel;
@@ -512,8 +566,6 @@ function gameLoop(timestamp) {
   if (game.state === "playing") {
     updateGame(dt);
     invincibilityTimer(dt);
-    // DIAG recordPlayerVelocity(player, dt);
-    // DIAG drawVelocityGraph();
     showTime();
   }
   drawScene();
@@ -604,7 +656,8 @@ function updateSpawning() {
 // !DRAW GAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function drawScene() {
   ctx.clearRect(0, 0, scene.width, scene.height);
-  drawBackground();
+  const activeLights = getActiveLights();
+  drawBackground(activeLights);
   ctx.save();
   ctx.translate(margin, margin);
   ctx.beginPath();
@@ -612,7 +665,7 @@ function drawScene() {
   ctx.clip();
   drawGame();
   ctx.restore();
-  drawForeground();
+  drawForeground(activeLights);
 }
 function drawGame() {
   balls.forEach((ball) => {
@@ -746,12 +799,12 @@ function populateShop() {
     });
     card.appendChild(buyButton);
     container.append(card);
-    console.log(key + " costs " + config.baseCost + " coins");
+    // console.log(key + " costs " + config.baseCost + " coins");
   }
   container.append(exitShopButton);
 }
 function storeStatsToLocal() {
-  console.log(JSON.stringify(upgrades));
+  // console.log(JSON.stringify(upgrades));
   const upgradeString = JSON.stringify(upgrades);
   localStorage.setItem("upgrades", upgradeString);
 }
@@ -818,7 +871,7 @@ function createCoin({
   };
 }
 function drawCoin(coin) {
-  console.log(coin);
+  // console.log(coin);
   ctx.save();
   ctx.beginPath();
   const haloGradient = ctx.createRadialGradient(
@@ -893,31 +946,6 @@ function updateCurrency() {
 //   20: createBallSprite(40),
 //   40: createBallSprite(80),
 // };
-
-function calculateLighting(point, light) {
-  const dx = light.x - point.x;
-  const dy = light.y - point.y;
-  const dz = light.z - point.z;
-  const L = Math.hypot(dx, dy, dz);
-  if (L === 0) {
-    return;
-  }
-  if (light.range > L) {
-    const lx = dx / L;
-    const ly = dy / L;
-    const lz = dz / L;
-    const intensity = light.strength * Math.max(0, 1 - L / light.range);
-    const color = light.color;
-    return {
-      lx,
-      ly,
-      lz,
-      intensity,
-      color,
-    };
-  }
-  return;
-}
 
 // function ballLightDistance(ball, source, light) {
 //   const dx = source.x - ball.x;
@@ -1358,17 +1386,7 @@ function updateBall(ball, dt) {
       // console.log("HIT: Theoretical height: " + highestPointTheoretical);
     }
   }
-  // if (ball.x + ball.radius >= canvas.width || ball.x - ball.radius <= 0) {
-  //   handleHorizontalCollision(ball, x0, dt);
-  // }
-  // if (ball.x + ball.radius >= canvas.width) {
-  //   ball.x = canvas.width - ball.radius;
-  //   ball.vx = -ball.vx;
-  // }
-  // if (ball.x - ball.radius <= 0) {
-  //   ball.x = 0 + ball.radius;
-  //   ball.vx = -ball.vx;
-  // }
+
   if (ball.y - ball.radius <= 0) {
     ball.y = 0 + ball.radius;
     ball.vy = -ball.vy;
@@ -1387,79 +1405,6 @@ function handleHorizontalCollision(ball, x0, dt) {
   }
 }
 
-// DIAGNOSTICS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// const playerXInfo = document.getElementById("player-x");
-// const playerVxInfo = document.getElementById("player-vx");
-// const playerAcceleration = document.getElementById("player-acceleration");
-
-// function updatePlayerInfo(player) {
-//   playerXInfo.innerText = player.x.toFixed(2);
-//   playerVxInfo.innerText = player.vx.toFixed(2);
-//   playerAcceleration.innerText = player.acceleration;
-// }
-
-// const accelerationSlider = document.getElementById("acceleration-slider");
-// const accelerationDisplay = document.getElementById("acceleration-value");
-// const decelerationSlider = document.getElementById("deceleration-slider");
-// const decelerationDisplay = document.getElementById("deceleration-value");
-
-// accelerationSlider.addEventListener("change", () => {
-//   player.acceleration = accelerationSlider.value;
-//   accelerationDisplay.innerText = player.acceleration;
-// });
-
-// decelerationSlider.addEventListener("change", () => {
-//   player.deceleration = decelerationSlider.value;
-//   decelerationDisplay.innerText = player.deceleration;
-// });
-
-// !!!!!!!!!! GRAPH !!!!!!!!!!!!!!!!!!!!!!!!!!
-
-// let sampleTimer = 0;
-// const sampleInterval = 0.0333;
-// const velocityHistory = [];
-// const historyDuration = 10;
-// const maxSamples = Math.round(historyDuration / sampleInterval);
-// function recordPlayerVelocity(player, dt) {
-//   sampleTimer += dt;
-
-//   if (sampleTimer >= sampleInterval) {
-//     velocityHistory.push(player.vx);
-//     sampleTimer -= sampleInterval;
-//     if (velocityHistory.length > maxSamples) {
-//       velocityHistory.shift();
-//     }
-//   }
-// }
-
-// const graphCanvas = document.getElementById("velocity-graph");
-// const graphCtx = graphCanvas.getContext("2d");
-// function drawVelocityGraph() {
-//   graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-//   const graphingRatio = -(graphCanvas.height / (player.maxSpeed * 2));
-
-//   graphCtx.beginPath();
-//   graphCtx.moveTo(0, graphCanvas.height / 2);
-//   graphCtx.lineTo(graphCanvas.width, graphCanvas.height / 2);
-//   graphCtx.stroke();
-//   let graphX = graphCanvas.width;
-//   const graphGap = graphCanvas.width / maxSamples;
-//   graphCtx.beginPath();
-//   for (let index = velocityHistory.length - 1; index >= 0; index--) {
-//     const graphY =
-//       graphingRatio * velocityHistory[index] + graphCanvas.height / 2;
-//     if (index === velocityHistory.length - 1) {
-//       graphCtx.moveTo(graphX, graphY);
-//     } else {
-//       graphCtx.lineTo(graphX, graphY);
-//     }
-
-//     //DRAW
-//     graphX -= graphGap;
-//   }
-//   graphCtx.stroke();
-// }
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 getStatsFromLocal();
 applyUpgrades();
 updateLives();
@@ -1546,70 +1491,19 @@ const ballSprites = {
   20: createBallSprite(40),
   40: createBallSprite(80),
 };
-function calculateDiffuse(normal, lighting) {
-  const diffuse = Math.max(
-    0,
-    normal.x * lighting.lx + normal.y * lighting.ly + normal.z * lighting.lz,
-  );
-  return diffuse;
-}
-function calculateSurfaceLighting(surface, point, light) {
-  const lightNormals = calculateLighting(point, light);
-
-  if (!lightNormals) {
-    return { r: 0, g: 0, b: 0 };
-  }
-
-  const diffuse = calculateDiffuse(surface.normal, lightNormals);
-  const contribution = diffuse * lightNormals.intensity;
-  let { r, g, b } = light.color;
-  r = r * contribution;
-  g = g * contribution;
-  b = b * contribution;
-  return { r, g, b };
-}
-function applyLighting(material, lighting) {
-  const { r: mr, g: mg, b: mb } = material.color;
-  const { r: lr, g: lg, b: lb } = lighting;
-  return { r: mr * lr, g: mg * lg, b: mb * lb };
-}
-function combineLighting(ambient, direct) {
-  return {
-    r: ambient.r + direct.r,
-    g: ambient.g + direct.g,
-    b: ambient.b + direct.b,
-  };
-}
-
-function calculateRoomColor(surface, point) {
-  const ambient = { r: 0.15, g: 0.15, b: 0.15 };
-
-  const surfaceLighting = calculateSurfaceLighting(surface, point, lights[0]);
-  const combinedLighting = combineLighting(ambient, surfaceLighting);
-  const surfaceColor = applyLighting(surface.material, combinedLighting);
-  return surfaceColor;
-}
-
-//LINEAR INTERPOLATION
-// OUT
-// function lerp(a, b, t) {
-//   return a + (b - a) * t;
-// }
-// function lerpColor(colorA, colorB, t) {
-//   return {
-//     r: lerp(colorA.r, colorB.r, t),
-//     g: lerp(colorA.g, colorB.g, t),
-//     b: lerp(colorA.b, colorB.b, t),
-//   };
-// }
-// function inverseLerp(a, b, value) {
-//   return (value - a) / (b - a);
-// }
 
 function getFloorColorAtDepth(z) {
   const t = inverseLerp(-room.worldDepth, 0, z);
-  const backColor = calculateRoomColor(roomSurfaces.floor, backFloorPoint);
-  const frontColor = calculateRoomColor(roomSurfaces.floor, frontFloorPoint);
+  const backColor = calculateSurfaceColor(
+    roomSurfaces.floor,
+    backFloorPoint,
+    lights,
+  );
+  const frontColor = calculateSurfaceColor(
+    roomSurfaces.floor,
+    frontFloorPoint,
+    lights,
+  );
   const zColor = lerpColor(backColor, frontColor, t);
   return zColor;
 }
@@ -1625,3 +1519,149 @@ function drawGradientOnFloor() {
   gradient.addColorStop(0, rgbToCss(getFloorColorAtDepth(-room.worldDepth)));
   gradient.addColorStop(1, rgbToCss(getFloorColorAtDepth(0)));
 }
+
+function getActiveLights() {
+  const coinLights = coins.map((item) => getCoinLight(item));
+  const activeLights = [...lights, ...coinLights];
+
+  return activeLights;
+}
+window.getActiveLights = getActiveLights;
+//
+
+function createLightingMap(
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+  surface,
+  activeLights,
+) {
+  const { rows, columns } = lightmapResolution;
+  const grid = [];
+  for (let i = 0; i < rows; i++) {
+    const row = [];
+    for (let j = 0; j < columns; j++) {
+      const tu = j / (columns - 1);
+      const tv = i / (rows - 1);
+
+      const point = bilinear3d(
+        topLeft,
+        topRight,
+        bottomLeft,
+        bottomRight,
+        tu,
+        tv,
+      );
+      row.push(calculateSurfaceColor(surface, point, activeLights));
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function createScreenGrid(topLeft, topRight, bottomLeft, bottomRight) {
+  const { rows, columns } = lightmapResolution;
+
+  const grid = [];
+  for (let i = 0; i < rows; i++) {
+    const row = [];
+    for (let j = 0; j < columns; j++) {
+      const tu = j / (columns - 1);
+      const tv = i / (rows - 1);
+      const point = bilinear2d(
+        topLeft,
+        topRight,
+        bottomLeft,
+        bottomRight,
+        tu,
+        tv,
+      );
+      row.push(point);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+//
+
+//
+
+//
+
+//
+
+// DIAGNOSTICS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// const playerXInfo = document.getElementById("player-x");
+// const playerVxInfo = document.getElementById("player-vx");
+// const playerAcceleration = document.getElementById("player-acceleration");
+
+// function updatePlayerInfo(player) {
+//   playerXInfo.innerText = player.x.toFixed(2);
+//   playerVxInfo.innerText = player.vx.toFixed(2);
+//   playerAcceleration.innerText = player.acceleration;
+// }
+
+// const accelerationSlider = document.getElementById("acceleration-slider");
+// const accelerationDisplay = document.getElementById("acceleration-value");
+// const decelerationSlider = document.getElementById("deceleration-slider");
+// const decelerationDisplay = document.getElementById("deceleration-value");
+
+// accelerationSlider.addEventListener("change", () => {
+//   player.acceleration = accelerationSlider.value;
+//   accelerationDisplay.innerText = player.acceleration;
+// });
+
+// decelerationSlider.addEventListener("change", () => {
+//   player.deceleration = decelerationSlider.value;
+//   decelerationDisplay.innerText = player.deceleration;
+// });
+
+// !!!!!!!!!! GRAPH !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// let sampleTimer = 0;
+// const sampleInterval = 0.0333;
+// const velocityHistory = [];
+// const historyDuration = 10;
+// const maxSamples = Math.round(historyDuration / sampleInterval);
+// function recordPlayerVelocity(player, dt) {
+//   sampleTimer += dt;
+
+//   if (sampleTimer >= sampleInterval) {
+//     velocityHistory.push(player.vx);
+//     sampleTimer -= sampleInterval;
+//     if (velocityHistory.length > maxSamples) {
+//       velocityHistory.shift();
+//     }
+//   }
+// }
+
+// const graphCanvas = document.getElementById("velocity-graph");
+// const graphCtx = graphCanvas.getContext("2d");
+// function drawVelocityGraph() {
+//   graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+//   const graphingRatio = -(graphCanvas.height / (player.maxSpeed * 2));
+
+//   graphCtx.beginPath();
+//   graphCtx.moveTo(0, graphCanvas.height / 2);
+//   graphCtx.lineTo(graphCanvas.width, graphCanvas.height / 2);
+//   graphCtx.stroke();
+//   let graphX = graphCanvas.width;
+//   const graphGap = graphCanvas.width / maxSamples;
+//   graphCtx.beginPath();
+//   for (let index = velocityHistory.length - 1; index >= 0; index--) {
+//     const graphY =
+//       graphingRatio * velocityHistory[index] + graphCanvas.height / 2;
+//     if (index === velocityHistory.length - 1) {
+//       graphCtx.moveTo(graphX, graphY);
+//     } else {
+//       graphCtx.lineTo(graphX, graphY);
+//     }
+
+//     //DRAW
+//     graphX -= graphGap;
+//   }
+//   graphCtx.stroke();
+// }
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
