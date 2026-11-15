@@ -139,10 +139,14 @@ function drawForeground(activeLights) {
     );
   }
   ctx.beginPath();
-  ctx.moveTo(margin, margin + arena.height);
-  ctx.lineTo(margin + arena.width, margin + arena.height);
-  ctx.lineTo(scene.width, scene.height);
-  ctx.lineTo(0, scene.height);
+  const topRight = { x: margin + arena.width, y: margin + arena.height };
+  const topLeft = { x: margin, y: margin + arena.height };
+  const bottomRight = { x: scene.width, y: scene.height };
+  const bottomLeft = { x: 0, y: scene.height };
+  ctx.moveTo(topLeft.x, topLeft.y);
+  ctx.lineTo(topRight.x, topRight.y);
+  ctx.lineTo(bottomRight.x, bottomRight.y);
+  ctx.lineTo(bottomLeft.x, bottomLeft.y);
   ctx.closePath();
   ctx.fillStyle = gradient;
   // console.log(
