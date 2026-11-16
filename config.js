@@ -8,6 +8,6 @@ export const scene = {
   height: arena.height + margin * 2,
 };
 export const lightmapResolution = {
-  rows: 17,
-  columns: 33,
+  rows: 32,
+  columns: 64,
 };

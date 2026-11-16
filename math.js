@@ -19,12 +19,12 @@ export function bilinearColor(
   topRight,
   bottomLeft,
   bottomRight,
-  x,
-  y,
+  u,
+  v,
 ) {
-  const topEdge = lerpColor(topLeft, topRight, x);
-  const bottomEdge = lerpColor(bottomLeft, bottomRight, x);
-  const result = lerpColor(topEdge, bottomEdge, y);
+  const topEdge = lerpColor(topLeft, topRight, u);
+  const bottomEdge = lerpColor(bottomLeft, bottomRight, u);
+  const result = lerpColor(topEdge, bottomEdge, v);
   return result;
 }
 

@@ -108,52 +108,93 @@ function drawForeground(activeLights) {
   // ===== FLOOR (FRONT) =====
 
   //gradient
-  const gradient = ctx.createLinearGradient(
-    arena.width / 2,
-    margin + arena.height,
-    arena.width / 2,
-    scene.height,
+  const worldTopLeft = {
+    x: 0,
+    y: arena.height,
+    z: 0,
+  };
+
+  const worldTopRight = {
+    x: arena.width,
+    y: arena.height,
+    z: 0,
+  };
+
+  const worldBottomLeft = {
+    x: 0,
+    y: arena.height,
+    z: room.worldDepth,
+  };
+
+  const worldBottomRight = {
+    x: arena.width,
+    y: arena.height,
+    z: room.worldDepth,
+  };
+
+  const lightingGrid = createLightingMap(
+    worldTopLeft,
+    worldTopRight,
+    worldBottomLeft,
+    worldBottomRight,
+    roomSurfaces.floor,
+    activeLights,
   );
-  gradient.addColorStop(0, rgbToCss(getFloorColorAtDepth(0)));
 
-  gradient.addColorStop(
-    1,
-    rgbToCss(
-      calculateSurfaceColor(
-        roomSurfaces.floor,
-        frontOuterFloorPoint,
-        activeLights,
-      ),
-    ),
-  );
+  // const gradient = ctx.createLinearGradient(
+  //   arena.width / 2,
+  //   margin + arena.height,
+  //   arena.width / 2,
+  //   scene.height,
+  // );
+  // gradient.addColorStop(0, rgbToCss(getFloorColorAtDepth(0)));
 
-  const sampleCount = 5;
+  // gradient.addColorStop(
+  //   1,
+  //   rgbToCss(
+  //     calculateSurfaceColor(
+  //       roomSurfaces.floor,
+  //       frontOuterFloorPoint,
+  //       activeLights,
+  //     ),
+  //   ),
+  // );
 
-  for (let i = 0; i < sampleCount; i++) {
-    const t = i / (sampleCount - 1);
-    const z = lerp(0, frontOuterFloorPoint.z, t);
-    const point = { x: arena.width / 2, y: arena.height, z };
-    gradient.addColorStop(
-      t,
-      rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
-    );
-  }
+  // const sampleCount = 5;
+
+  // for (let i = 0; i < sampleCount; i++) {
+  //   const t = i / (sampleCount - 1);
+  //   const z = lerp(0, frontOuterFloorPoint.z, t);
+  //   const point = { x: arena.width / 2, y: arena.height, z };
+  //   gradient.addColorStop(
+  //     t,
+  //     rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
+  //   );
+  // }
   ctx.beginPath();
   const topRight = { x: margin + arena.width, y: margin + arena.height };
   const topLeft = { x: margin, y: margin + arena.height };
   const bottomRight = { x: scene.width, y: scene.height };
   const bottomLeft = { x: 0, y: scene.height };
-  ctx.moveTo(topLeft.x, topLeft.y);
-  ctx.lineTo(topRight.x, topRight.y);
-  ctx.lineTo(bottomRight.x, bottomRight.y);
-  ctx.lineTo(bottomLeft.x, bottomLeft.y);
-  ctx.closePath();
-  ctx.fillStyle = gradient;
+
+  const screenGrid = createScreenGrid(
+    topLeft,
+    topRight,
+    bottomLeft,
+    bottomRight,
+  );
+  drawLightingGrid(ctx, screenGrid, lightingGrid);
+  // ctx.moveTo(topLeft.x, topLeft.y);
+  // ctx.lineTo(topRight.x, topRight.y);
+  // ctx.lineTo(bottomRight.x, bottomRight.y);
+  // ctx.lineTo(bottomLeft.x, bottomLeft.y);
+  // ctx.closePath();
+  // ctx.fillStyle = "blue";
   // console.log(
   //   "Floor (front)",
   //   calculateSurfaceColor(roomSurfaces.floor, frontFloorPoint, lights),
   // );
-  ctx.fill();
+  // ctx.fill();
 
   // ===== LEFT WALL (FRONT) =====
   ctx.beginPath();
@@ -242,24 +283,24 @@ function drawBackground(activeLights) {
   // ===== FLOOR (BACK) =====
 
   //Gradient
-  const gradient = ctx.createLinearGradient(
-    0,
-    margin + arena.height - room.depth,
-    0,
-    margin + arena.height,
-  );
+  // const gradient = ctx.createLinearGradient(
+  //   0,
+  //   margin + arena.height - room.depth,
+  //   0,
+  //   margin + arena.height,
+  // );
 
-  const sampleCount = 5;
+  // const sampleCount = 5;
 
-  for (let i = 0; i < sampleCount; i++) {
-    const t = i / (sampleCount - 1);
-    const z = lerp(-room.worldDepth, 0, t);
-    const point = { x: arena.width / 2, y: arena.height, z };
-    gradient.addColorStop(
-      t,
-      rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
-    );
-  }
+  // for (let i = 0; i < sampleCount; i++) {
+  //   const t = i / (sampleCount - 1);
+  //   const z = lerp(-room.worldDepth, 0, t);
+  //   const point = { x: arena.width / 2, y: arena.height, z };
+  //   gradient.addColorStop(
+  //     t,
+  //     rgbToCss(calculateSurfaceColor(roomSurfaces.floor, point, activeLights)),
+  //   );
+  // }
 
   //
   ctx.beginPath();
@@ -311,74 +352,76 @@ function drawBackground(activeLights) {
     roomSurfaces.floor,
     activeLights,
   );
-
+  // for (const row of screenGrid) {
+  //   console.log(row[row.length - 1]);
+  // }
   const subdivisions = 4;
+  drawLightingGrid(ctx, screenGrid, lightingGrid);
+  // for (let i = 0; i < screenGrid.length - 1; i++) {
+  //   for (let j = 0; j < screenGrid[0].length - 1; j++) {
+  //     const screenTopLeft = screenGrid[i][j];
+  //     const screenTopRight = screenGrid[i][j + 1];
+  //     const screenBottomLeft = screenGrid[i + 1][j];
+  //     const screenBottomRight = screenGrid[i + 1][j + 1];
 
-  for (let i = 0; i < screenGrid.length - 1; i++) {
-    for (let j = 0; j < screenGrid[0].length - 1; j++) {
-      const screenTopLeft = screenGrid[i][j];
-      const screenTopRight = screenGrid[i][j + 1];
-      const screenBottomLeft = screenGrid[i + 1][j];
-      const screenBottomRight = screenGrid[i + 1][j + 1];
+  //     const colorTopLeft = lightingGrid[i][j];
+  //     const colorTopRight = lightingGrid[i][j + 1];
+  //     const colorBottomLeft = lightingGrid[i + 1][j];
+  //     const colorBottomRight = lightingGrid[i + 1][j + 1];
+  //     ctx.beginPath();
+  //     ctx.moveTo(screenTopLeft.x, screenTopLeft.y);
+  //     ctx.lineTo(screenTopRight.x, screenTopRight.y);
+  //     ctx.lineTo(screenBottomRight.x, screenBottomRight.y);
+  //     ctx.lineTo(screenBottomLeft.x, screenBottomLeft.y);
+  //     ctx.closePath();
+  //     ctx.fillStyle = rgbToCss(colorTopLeft);
+  //     ctx.fill();
+  //     // EXPERIMENTAL: Subdivision-based lighting interpolation.
+  // Currently using a higher-resolution lighting grid instead.
+  // May be useful later if lighting calculations become expensive.
+  // for (let row = 0; row < subdivisions; row++) {
+  //   for (let col = 0; col < subdivisions; col++) {
+  //     const uStart = col / subdivisions;
+  //     const uEnd = (col + 1) / subdivisions;
+  //     const vStart = row / subdivisions;
+  //     const vEnd = (row + 1) / subdivisions;
 
-      const colorTopLeft = lightingGrid[i][j];
-      const colorTopRight = lightingGrid[i][j + 1];
-      const colorBottomLeft = lightingGrid[i + 1][j];
-      const colorBottomRight = lightingGrid[i + 1][j + 1];
-      ctx.beginPath();
-      ctx.moveTo(screenTopLeft.x, screenTopLeft.y);
-      ctx.lineTo(screenTopRight.x, screenTopRight.y);
-      ctx.lineTo(screenBottomRight.x, screenBottomRight.y);
-      ctx.lineTo(screenBottomLeft.x, screenBottomLeft.y);
-      ctx.closePath();
-      ctx.fillStyle = rgbToCss(colorTopLeft);
-      ctx.fill();
-      // EXPERIMENTAL: Subdivision-based lighting interpolation.
-      // Currently using a higher-resolution lighting grid instead.
-      // May be useful later if lighting calculations become expensive.
-      // for (let row = 0; row < subdivisions; row++) {
-      //   for (let col = 0; col < subdivisions; col++) {
-      //     const uStart = col / subdivisions;
-      //     const uEnd = (col + 1) / subdivisions;
-      //     const vStart = row / subdivisions;
-      //     const vEnd = (row + 1) / subdivisions;
-
-      //     const smallTopLeft = bilinear2d(
-      //       screenTopLeft,
-      //       screenTopRight,
-      //       screenBottomLeft,
-      //       screenBottomRight,
-      //       uStart,
-      //       vStart,
-      //     );
-      //     const smallTopRight = bilinear2d(
-      //       screenTopLeft,
-      //       screenTopRight,
-      //       screenBottomLeft,
-      //       screenBottomRight,
-      //       uEnd,
-      //       vStart,
-      //     );
-      //     const smallBottomLeft = bilinear2d(
-      //       screenTopLeft,
-      //       screenTopRight,
-      //       screenBottomLeft,
-      //       screenBottomRight,
-      //       uStart,
-      //       vEnd,
-      //     );
-      //     const smallBottomRight = bilinear2d(
-      //       screenTopLeft,
-      //       screenTopRight,
-      //       screenBottomLeft,
-      //       screenBottomRight,
-      //       uEnd,
-      //       vEnd,
-      //     );
-      //   }
-      // }
-    }
-  }
+  //     const smallTopLeft = bilinear2d(
+  //       screenTopLeft,
+  //       screenTopRight,
+  //       screenBottomLeft,
+  //       screenBottomRight,
+  //       uStart,
+  //       vStart,
+  //     );
+  //     const smallTopRight = bilinear2d(
+  //       screenTopLeft,
+  //       screenTopRight,
+  //       screenBottomLeft,
+  //       screenBottomRight,
+  //       uEnd,
+  //       vStart,
+  //     );
+  //     const smallBottomLeft = bilinear2d(
+  //       screenTopLeft,
+  //       screenTopRight,
+  //       screenBottomLeft,
+  //       screenBottomRight,
+  //       uStart,
+  //       vEnd,
+  //     );
+  //     const smallBottomRight = bilinear2d(
+  //       screenTopLeft,
+  //       screenTopRight,
+  //       screenBottomLeft,
+  //       screenBottomRight,
+  //       uEnd,
+  //       vEnd,
+  //     );
+  //   }
+  // }
+  //   }
+  // }
 
   // ctx.moveTo(bottomLeft.x, bottomLeft.y);
   // ctx.lineTo(topLeft.x, topLeft.y);
@@ -390,7 +433,7 @@ function drawBackground(activeLights) {
   //   "Floor(BACK)",
   //   calculateSurfaceColor(roomSurfaces.floor, backFloorPoint, activeLights),
   // );
-  ctx.fill();
+  // ctx.fill();
 
   // ===== RIGHT WALL (BACK) =====
   ctx.beginPath();
@@ -856,7 +899,7 @@ function createCoin({
   light = {},
 }) {
   const coinLight = {
-    zOffset: 150,
+    zOffset: 0,
     range: 450,
     strength: 0.8,
     color: { r: 1, g: 0.75, b: 0.2 },
@@ -1588,6 +1631,43 @@ function createScreenGrid(topLeft, topRight, bottomLeft, bottomRight) {
   return grid;
 }
 
+function drawLightingGrid(ctx, screenGrid, lightingGrid) {
+  ctx.save();
+  for (let i = 0; i < screenGrid.length - 1; i++) {
+    for (let j = 0; j < screenGrid[0].length - 1; j++) {
+      const screenTopLeft = screenGrid[i][j];
+      const screenTopRight = screenGrid[i][j + 1];
+      const screenBottomLeft = screenGrid[i + 1][j];
+      const screenBottomRight = screenGrid[i + 1][j + 1];
+
+      const colorTopLeft = lightingGrid[i][j];
+      const colorTopRight = lightingGrid[i][j + 1];
+      const colorBottomLeft = lightingGrid[i + 1][j];
+      const colorBottomRight = lightingGrid[i + 1][j + 1];
+      ctx.beginPath();
+      ctx.moveTo(screenTopLeft.x, screenTopLeft.y);
+      ctx.lineTo(screenTopRight.x, screenTopRight.y);
+      ctx.lineTo(screenBottomRight.x, screenBottomRight.y);
+      ctx.lineTo(screenBottomLeft.x, screenBottomLeft.y);
+      ctx.closePath();
+      const color = bilinearColor(
+        colorTopLeft,
+        colorTopRight,
+        colorBottomLeft,
+        colorBottomRight,
+        0.5,
+        0.5,
+      );
+      ctx.fillStyle = rgbToCss(color);
+      // ctx.fillStyle = colorTopLeft;
+      ctx.fill();
+      // ctx.strokeStyle = "green";
+      // ctx.lineWidth = 2;
+      // ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 //
 
 //
