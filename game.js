@@ -113,7 +113,7 @@ function drawSurface(ctx, surface, screenCorners, worldCorners, activeLights) {
     screenCorners.topRight,
     screenCorners.bottomLeft,
     screenCorners.bottomRight,
-    16,
+    8,
     16,
   );
   const lightingMap = createLightingMap(
@@ -123,7 +123,7 @@ function drawSurface(ctx, surface, screenCorners, worldCorners, activeLights) {
     worldCorners.bottomRight,
     surface,
     activeLights,
-    16,
+    8,
     16,
   );
   drawLightingGrid(ctx, screenGrid, lightingMap);
